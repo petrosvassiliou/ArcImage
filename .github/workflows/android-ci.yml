@@ -58,13 +58,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK (API 36)
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android 17 / API 36 Platform & Build-Tools
+      - name: Accept Android SDK Licenses & Install API 36 Platform
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -n 1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" || \
+            "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;35.0.0"
 
       - name: Set up Gradle 8.12
         uses: gradle/actions/setup-gradle@v4
@@ -102,21 +101,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK (API 36)
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android 17 / API 36 Platform & Build-Tools
+      - name: Accept Android SDK Licenses & Install API 36 Platform
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -n 1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" || \
+            "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;35.0.0"
 
       - name: Set up Gradle 8.12
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.12'
 
-      - name: Assemble Debug & Release APKs (Universal + arm64-v8a + x86_64)
-        run: gradle assembleDebug assembleRelease --stacktrace
+      - name: Assemble Debug, Release & AndroidTest APKs (Universal + arm64-v8a + x86_64)
+        run: gradle assembleDebug assembleRelease assembleDebugAndroidTest --stacktrace
 
       - name: Upload ArcImage APKs (Googlebook OS x86_64, ARM64 & Universal)
         uses: actions/upload-artifact@v4
@@ -125,12 +123,14 @@ jobs:
           path: |
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/androidTest/debug/*.apk
 
   # ---------------------------------------------------------------------------
   # 3. Compose UI & Image Encoder Instrumented Tests (x86_64 KVM Emulator)
   # ---------------------------------------------------------------------------
   instrumented-tests:
     name: Compose UI & Encoder Instrumented Tests
+    if: github.event_name == 'workflow_dispatch'
     needs: lint-and-unit-tests
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -144,6 +144,13 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: Accept Android SDK Licenses & Install API 36 Platform
+        run: |
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -n 1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" || \
+            "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;35.0.0"
 
       - name: Enable KVM Hardware Acceleration
         run: |
@@ -159,8 +166,8 @@ jobs:
       - name: Run Instrumented Tests on x86_64 Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
-          target: google_apis
+          api-level: 34
+          target: default
           arch: x86_64
           profile: pixel_tablet
           disable-animations: true

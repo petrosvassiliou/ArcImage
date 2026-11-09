@@ -27,9 +27,14 @@ enum class AppLanguage(
 
 object LocaleController {
     fun getCurrentAppLanguage(): AppLanguage {
-        val currentLocales = AppCompatDelegate.getApplicationLocales()
-        if (currentLocales.isEmpty) return AppLanguage.SYSTEM
-        return AppLanguage.fromLanguageTag(currentLocales.toLanguageTags())
+        return runCatching {
+            val currentLocales = AppCompatDelegate.getApplicationLocales()
+            if (currentLocales == null || currentLocales.isEmpty) {
+                AppLanguage.SYSTEM
+            } else {
+                AppLanguage.fromLanguageTag(currentLocales.toLanguageTags())
+            }
+        }.getOrDefault(AppLanguage.SYSTEM)
     }
 
     fun setAppLanguage(language: AppLanguage) {

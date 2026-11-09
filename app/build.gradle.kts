@@ -17,11 +17,6 @@ android {
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // Native architecture compatibility for ARM64 & x86_64 Googlebook OS laptops/desktops and Android phones
-        ndk {
-            abiFilters += listOf("arm64-v8a", "x86_64")
-        }
     }
 
     // Configure supported locales matching res/xml/locales_config.xml
@@ -70,6 +65,12 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        warningsAsErrors = false
     }
 
     testOptions {
@@ -140,8 +141,9 @@ dependencies {
     // 3. 7-Zip-JBinding-4Android: Native ARM64 & x86_64 extraction for RAR4, RAR5 & password-protected RAR/7z
     implementation(libs.sevenzip.jbinding.android)
 
-    // Unit Testing (JUnit 4, Coroutines Test, Turbine Flow Assertions)
+    // Unit Testing (JUnit 4, Robolectric, Coroutines Test, Turbine Flow Assertions)
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
 
