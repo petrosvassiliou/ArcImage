@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand & App Identity -->
+    <string name="app_subtitle">Διαχειριστής Αρχείων &amp; Στούντιο Εικόνας</string>
+    <string name="share_target_label">Άνοιγμα στο ArcImage</string>
+    <string name="open_archive_with_arcimage">Εξαγωγή ή έλεγχος με το ArcImage</string>
+    <string name="open_image_with_arcimage">Αλλαγή μεγέθους ή μετατροπή με το ArcImage</string>
+
+    <!-- Navigation & Adaptive Shell -->
+    <string name="nav_archive_manager">Διαχείριση Αρχείων</string>
+    <string name="nav_image_studio">Στούντιο Εικόνας</string>
+    <string name="action_language">Γλώσσα</string>
+    <string name="action_theme">Θέμα</string>
+    <string name="theme_system">Προεπιλογή συστήματος</string>
+    <string name="theme_light">Φωτεινό</string>
+    <string name="theme_dark">Σκοτεινό</string>
+    <string name="dynamic_color_label">Δυναμικά χρώματα Material You</string>
+    <string name="shortcuts_hint">Ctrl+O Άνοιγμα • Ctrl+A Επιλογή όλων • Del Αφαίρεση • Esc Εκκαθάριση</string>
+    <string name="language_dialog_title">Γλώσσα εφαρμογής</string>
+    <string name="language_dialog_subtitle">Επιλέξτε την προτιμώμενη γλώσσα εμφάνισης για το ArcImage</string>
+    <string name="language_system_default">Προεπιλογή συστήματος</string>
+    <string name="action_close">Κλείσιμο</string>
+    <string name="action_cancel">Ακύρωση</string>
+    <string name="action_confirm">Επιβεβαίωση</string>
+    <string name="action_select_all">Επιλογή όλων</string>
+    <string name="action_clear_selection">Εκκαθάριση επιλογής</string>
+    <string name="action_remove_selected">Αφαίρεση επιλεγμένων</string>
+    <string name="action_remove">Αφαίρεση</string>
+    <string name="action_share">Κοινοποίηση</string>
+    <string name="action_inspect">Έλεγχος λεπτομερειών</string>
+    <string name="selected_count_format">%1$d επιλεγμένα</string>
+    <string name="drop_zone_active_label">Αποθέστε αρχεία, φακέλους, συμπιεσμένα αρχεία ή εικόνες στο ArcImage</string>
+    <string name="continuity_restored_banner">Ο χώρος εργασίας συγχρονίστηκε μέσω Googlebook OS Continuity</string>
+
+    <!-- Jetpack Glance Desktop & Homescreen Widget -->
+    <string name="widget_name">Γρήγορες ενέργειες ArcImage</string>
+    <string name="widget_description">Γρήγορη εξαγωγή αρχείων ή μαζική αλλαγή μεγέθους και μετατροπή εικόνων σε Googlebook OS και Android.</string>
+    <string name="widget_action_extract">Εξαγωγή αρχείου</string>
+    <string name="widget_action_image">Αλλαγή μεγέθους/Μετατροπή</string>
+
+    <!-- Core Feature 1: Archive Manager -->
+    <string name="archive_mode_compress">Δημιουργία αρχείου</string>
+    <string name="archive_mode_explore">Εξερεύνηση αρχείου</string>
+    <string name="archive_add_files">Προσθήκη αρχείων</string>
+    <string name="archive_add_folder">Προσθήκη φακέλου</string>
+    <string name="archive_open_archive">Άνοιγμα αρχείου</string>
+    <string name="archive_compress_now">Συμπίεση στοιχείων</string>
+    <string name="archive_extract_all">Εξαγωγή όλων</string>
+    <string name="archive_extract_selected">Εξαγωγή επιλεγμένων (%1$d)</string>
+    <string name="archive_choose_destination">Φάκελος προορισμού</string>
+    <string name="archive_default_destination">Εξαγωγές ArcImage</string>
+    <string name="archive_empty_compress_title">Δημιουργία νέου συμπιεσμένου αρχείου</string>
+    <string name="archive_empty_compress_desc">Επιλέξτε αρχεία και αναδρομικούς φακέλους ή σύρετε και αποθέστε τα απευθείας από τη Διαχείριση Αρχείων του Googlebook OS.</string>
+    <string name="archive_empty_explore_title">Έλεγχος &amp; εξαγωγή αρχείων</string>
+    <string name="archive_empty_explore_desc">Ανοίξτε ή αποθέστε αρχείο .zip, .7z, .rar (RAR4/RAR5), .tar, .gz, .bz2 ή .xz για περιήγηση χωρίς πλήρη εξαγωγή.</string>
+    <string name="archive_search_placeholder">Φιλτράρισμα αρχείων εντός του πακέτου…</string>
+    <string name="archive_dialog_compress_title">Ρυθμίσεις συμπίεσης</string>
+    <string name="archive_name_label">Όνομα αρχείου</string>
+    <string name="archive_format_label">Μορφή συμπίεσης</string>
+    <string name="archive_level_label">Επίπεδο συμπίεσης</string>
+    <string name="compression_level_store">Αποθήκευση</string>
+    <string name="compression_level_fast">Γρήγορη</string>
+    <string name="compression_level_normal">Κανονική</string>
+    <string name="compression_level_maximum">Μέγιστη</string>
+    <string name="archive_password_label">Προστασία με κωδικό (Προαιρετικό)</string>
+    <string name="archive_password_supporting">Κρυπτογράφηση AES-256 για αρχεία ZIP &amp; 7Z</string>
+    <string name="archive_password_show">Εμφάνιση κωδικού</string>
+    <string name="archive_password_hide">Απόκρυψη κωδικού</string>
+    <string name="archive_start_compression">Συμπίεση τώρα</string>
+    <string name="archive_password_prompt_title">Κρυπτογραφημένο αρχείο</string>
+    <string name="archive_password_prompt_desc">Εισαγάγετε τον κωδικό πρόσβασης για έλεγχο ή εξαγωγή του %1$s.</string>
+    <string name="archive_password_input_label">Κωδικός πρόσβασης αρχείου</string>
+    <string name="archive_unlock_action">Ξεκλείδωμα</string>
+    <string name="archive_inspector_title">Επιθεωρητής αρχείου</string>
+    <string name="archive_inspector_empty">Επιλέξτε ένα στοιχείο ή μια εγγραφή αρχείου για να δείτε τον λόγο συμπίεσης, την κρυπτογράφηση και τις λεπτομέρειες.</string>
+    <string name="archive_entry_path">Εσωτερική διαδρομή</string>
+    <string name="archive_entry_type">Τύπος στοιχείου</string>
+    <string name="archive_type_folder">Φάκελος</string>
+    <string name="archive_type_file">Αρχείο</string>
+    <string name="archive_uncompressed_size">Αρχικό μέγεθος</string>
+    <string name="archive_compressed_size">Συμπιεσμένο μέγεθος</string>
+    <string name="archive_compression_ratio">Εξοικονόμηση χώρου</string>
+    <string name="archive_encrypted_status">Προστασία</string>
+    <string name="archive_encrypted_yes">Κρυπτογραφημένο (Με κωδικό πρόσβασης)</string>
+    <string name="archive_encrypted_no">Τυπικό (Χωρίς κρυπτογράφηση)</string>
+    <string name="archive_progress_compressing">Συμπίεση αρχείων…</string>
+    <string name="archive_progress_extracting">Εξαγωγή αρχείου…</string>
+    <string name="archive_progress_inspecting">Ανάγνωση δομής αρχείου…</string>
+    <string name="archive_status_compress_success">Το αρχείο δημιουργήθηκε: %1$s</string>
+    <string name="archive_status_extract_success">Εξήχθησαν %1$d στοιχείο(-α) στο %2$s</string>
+
+    <!-- Core Feature 2: Image Studio -->
+    <string name="image_add_photos">Προσθήκη εικόνων</string>
+    <string name="image_clear_batch">Εκκαθάριση δέσμης</string>
+    <string name="image_process_batch">Μετατροπή %1$d εικόνας(-ων)</string>
+    <string name="image_empty_title">Μαζική αλλαγή μεγέθους &amp; μετατροπή</string>
+    <string name="image_empty_desc">Επιλέξτε ή αποθέστε εικόνες JPG, PNG, WEBP, GIF, BMP ή HEIC/HEIF για μαζική αλλαγή μεγέθους, συμπίεση και μετατροπή.</string>
+    <string name="image_settings_title">Ρυθμίσεις μετασχηματισμού</string>
+    <string name="image_resize_mode_label">Λειτουργία αλλαγής μεγέθους</string>
+    <string name="resize_mode_25">25%</string>
+    <string name="resize_mode_50">50%</string>
+    <string name="resize_mode_75">75%</string>
+    <string name="resize_mode_custom_pct">Προσαρμοσμένο %</string>
+    <string name="resize_mode_exact_px">Πλάτος × Ύψος</string>
+    <string name="image_custom_percent_label">Ποσοστό κλίμακας (%)</string>
+    <string name="image_width_px_label">Πλάτος (px)</string>
+    <string name="image_height_px_label">Ύψος (px)</string>
+    <string name="image_maintain_aspect">Διατήρηση αναλογίας διαστάσεων</string>
+    <string name="image_quality_label">Ποιότητα / Συμπίεση: %1$d%%</string>
+    <string name="image_estimated_output">Εκτιμώμενο μέγεθος εξόδου: %1$s</string>
+    <string name="image_target_format_label">Μορφή εξόδου</string>
+    <string name="image_preserve_exif_label">Διατήρηση μεταδεδομένων EXIF</string>
+    <string name="image_preserve_exif_desc">Διατήρηση στοιχείων κάμερας, ημερομηνίας και GPS όπου υποστηρίζεται· απενεργοποιήστε για αφαίρεση EXIF.</string>
+    <string name="image_comparison_title">Σύγκριση μεγέθους Πριν / Μετά</string>
+    <string name="image_original_label">Αρχικό</string>
+    <string name="image_estimated_or_actual_label">Έξοδος</string>
+    <string name="image_savings_badge">%1$s → %2$s (%3$s)</string>
+    <string name="image_exif_present">EXIF διατηρήθηκαν</string>
+    <string name="image_exif_stripped">EXIF αφαιρέθηκαν</string>
+    <string name="image_progress_processing">Επεξεργασία εικόνας %1$d από %2$d…</string>
+    <string name="image_status_batch_complete">Επεξεργάστηκαν %1$d εικόνα(-ες) • Σύνολο εξόδου: %2$s</string>
+
+    <!-- Errors & Alerts -->
+    <string name="error_invalid_password">Λάθος κωδικός πρόσβασης ή μη υποστηριζόμενη κρυπτογραφημένη κεφαλίδα.</string>
+    <string name="error_unsupported_format">Μη υποστηριζόμενη μορφή: %1$s</string>
+    <string name="error_archive_corrupted">Αδυναμία ανάγνωσης αρχείου: %1$s</string>
+    <string name="error_single_file_codec">Τα GZ, BZ2 και XZ συμπιέζουν ένα μόνο αρχείο. Επιλέξτε TAR.GZ, TAR.BZ2 ή TAR.XZ για πολλαπλά αρχεία ή φακέλους.</string>
+    <string name="error_image_decode_failed">Αποτυχία επεξεργασίας εικόνας: %1$s</string>
+    <string name="error_operation_cancelled">Η εργασία ακυρώθηκε.</string>
+    <string name="error_generic">Σφάλμα: %1$s</string>
+</resources>

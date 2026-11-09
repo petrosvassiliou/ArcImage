@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path
+        name="arcimage_cache"
+        path="exports/" />
+    <files-path
+        name="arcimage_files"
+        path="exports/" />
+    <external-files-path
+        name="arcimage_external"
+        path="." />
+</paths>

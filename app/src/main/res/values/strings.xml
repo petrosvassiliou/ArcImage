@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand & App Identity -->
+    <string name="app_name" translatable="false">ArcImage</string>
+    <string name="app_subtitle">Archiver &amp; Image Studio</string>
+    <string name="share_target_label">Open in ArcImage</string>
+    <string name="open_archive_with_arcimage">Extract or Inspect with ArcImage</string>
+    <string name="open_image_with_arcimage">Resize or Convert with ArcImage</string>
+
+    <!-- Navigation & Adaptive Shell -->
+    <string name="nav_archive_manager">Archive Manager</string>
+    <string name="nav_image_studio">Image Studio</string>
+    <string name="action_language">Language</string>
+    <string name="action_theme">Theme</string>
+    <string name="theme_system">System Default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="dynamic_color_label">Material You Dynamic Color</string>
+    <string name="shortcuts_hint">Ctrl+O Open • Ctrl+A Select All • Del Remove • Esc Clear</string>
+    <string name="language_dialog_title">Application Language</string>
+    <string name="language_dialog_subtitle">Choose your preferred display language for ArcImage</string>
+    <string name="language_system_default">System Default</string>
+    <string name="action_close">Close</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_select_all">Select All</string>
+    <string name="action_clear_selection">Clear Selection</string>
+    <string name="action_remove_selected">Remove Selected</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_share">Share</string>
+    <string name="action_inspect">Inspect Details</string>
+    <string name="selected_count_format">%1$d selected</string>
+    <string name="drop_zone_active_label">Drop files, folders, archives, or images into ArcImage</string>
+    <string name="continuity_restored_banner">Workspace synchronized for Googlebook OS Continuity</string>
+
+    <!-- Jetpack Glance Desktop & Homescreen Widget -->
+    <string name="widget_name">ArcImage Quick Actions</string>
+    <string name="widget_description">Quickly extract archives or batch resize and convert images on Googlebook OS and Android.</string>
+    <string name="widget_action_extract">Extract Archive</string>
+    <string name="widget_action_image">Resize/Convert Images</string>
+
+    <!-- Core Feature 1: Archive Manager -->
+    <string name="archive_mode_compress">Create Archive</string>
+    <string name="archive_mode_explore">Explore Archive</string>
+    <string name="archive_add_files">Add Files</string>
+    <string name="archive_add_folder">Add Folder</string>
+    <string name="archive_open_archive">Open Archive</string>
+    <string name="archive_compress_now">Compress Items</string>
+    <string name="archive_extract_all">Extract All</string>
+    <string name="archive_extract_selected">Extract Selected (%1$d)</string>
+    <string name="archive_choose_destination">Destination Folder</string>
+    <string name="archive_default_destination">ArcImage Exports</string>
+    <string name="archive_empty_compress_title">Build a New Archive</string>
+    <string name="archive_empty_compress_desc">Select files and recursive folders, or drag and drop them directly from the Googlebook OS File Manager.</string>
+    <string name="archive_empty_explore_title">Inspect &amp; Extract Archives</string>
+    <string name="archive_empty_explore_desc">Open or drop a .zip, .7z, .rar (RAR4/RAR5), .tar, .gz, .bz2, or .xz archive to browse contents without full extraction.</string>
+    <string name="archive_search_placeholder">Filter files inside archive…</string>
+    <string name="archive_dialog_compress_title">Compression Settings</string>
+    <string name="archive_name_label">Archive Filename</string>
+    <string name="archive_format_label">Archive Format</string>
+    <string name="archive_level_label">Compression Level</string>
+    <string name="compression_level_store">Store</string>
+    <string name="compression_level_fast">Fast</string>
+    <string name="compression_level_normal">Normal</string>
+    <string name="compression_level_maximum">Maximum</string>
+    <string name="archive_password_label">Password Protection (Optional)</string>
+    <string name="archive_password_supporting">AES-256 encryption for ZIP &amp; 7Z archives</string>
+    <string name="archive_password_show">Show password</string>
+    <string name="archive_password_hide">Hide password</string>
+    <string name="archive_start_compression">Compress Now</string>
+    <string name="archive_password_prompt_title">Encrypted Archive</string>
+    <string name="archive_password_prompt_desc">Enter the password required to inspect or extract %1$s.</string>
+    <string name="archive_password_input_label">Archive Password</string>
+    <string name="archive_unlock_action">Unlock</string>
+    <string name="archive_inspector_title">Archive Inspector</string>
+    <string name="archive_inspector_empty">Select a source item or archive entry to inspect compression ratio, encryption status, and details.</string>
+    <string name="archive_entry_path">Internal Path</string>
+    <string name="archive_entry_type">Item Type</string>
+    <string name="archive_type_folder">Folder</string>
+    <string name="archive_type_file">File</string>
+    <string name="archive_uncompressed_size">Original Size</string>
+    <string name="archive_compressed_size">Packed Size</string>
+    <string name="archive_compression_ratio">Space Saved</string>
+    <string name="archive_encrypted_status">Protection</string>
+    <string name="archive_encrypted_yes">Encrypted (Password Protected)</string>
+    <string name="archive_encrypted_no">Standard (Unencrypted)</string>
+    <string name="archive_progress_compressing">Compressing files…</string>
+    <string name="archive_progress_extracting">Extracting archive…</string>
+    <string name="archive_progress_inspecting">Reading archive headers…</string>
+    <string name="archive_status_compress_success">Archive created: %1$s</string>
+    <string name="archive_status_extract_success">Extracted %1$d item(s) to %2$s</string>
+
+    <!-- Core Feature 2: Image Studio -->
+    <string name="image_add_photos">Add Images</string>
+    <string name="image_clear_batch">Clear Batch</string>
+    <string name="image_process_batch">Convert %1$d Image(s)</string>
+    <string name="image_empty_title">Batch Resize &amp; Convert Images</string>
+    <string name="image_empty_desc">Select or drop JPG, PNG, WEBP, GIF, BMP, or HEIC/HEIF images to resize, compress, and convert in batch.</string>
+    <string name="image_settings_title">Transformation Settings</string>
+    <string name="image_resize_mode_label">Resize Mode</string>
+    <string name="resize_mode_25">25%</string>
+    <string name="resize_mode_50">50%</string>
+    <string name="resize_mode_75">75%</string>
+    <string name="resize_mode_custom_pct">Custom %</string>
+    <string name="resize_mode_exact_px">Width × Height</string>
+    <string name="image_custom_percent_label">Scale Percentage (%)</string>
+    <string name="image_width_px_label">Width (px)</string>
+    <string name="image_height_px_label">Height (px)</string>
+    <string name="image_maintain_aspect">Maintain Aspect Ratio</string>
+    <string name="image_quality_label">Quality / Compression: %1$d%%</string>
+    <string name="image_estimated_output">Estimated Batch Output: %1$s</string>
+    <string name="image_target_format_label">Output Format</string>
+    <string name="image_preserve_exif_label">Preserve EXIF Metadata</string>
+    <string name="image_preserve_exif_desc">Keep camera, date, and GPS metadata when supported; disable to strip EXIF tags.</string>
+    <string name="image_comparison_title">Before / After Size Comparison</string>
+    <string name="image_original_label">Original</string>
+    <string name="image_estimated_or_actual_label">Output</string>
+    <string name="image_savings_badge">%1$s → %2$s (%3$s)</string>
+    <string name="image_exif_present">EXIF Preserved</string>
+    <string name="image_exif_stripped">EXIF Stripped</string>
+    <string name="image_progress_processing">Processing image %1$d of %2$d…</string>
+    <string name="image_status_batch_complete">Processed %1$d image(s) • Output total: %2$s</string>
+
+    <!-- Errors & Alerts -->
+    <string name="error_invalid_password">Incorrect password or unsupported encrypted header.</string>
+    <string name="error_unsupported_format">Unsupported format: %1$s</string>
+    <string name="error_archive_corrupted">Unable to read archive: %1$s</string>
+    <string name="error_single_file_codec">GZ, BZ2, and XZ compress a single file. Choose TAR.GZ, TAR.BZ2, or TAR.XZ for multiple items or folders.</string>
+    <string name="error_image_decode_failed">Failed to process image: %1$s</string>
+    <string name="error_operation_cancelled">Operation cancelled.</string>
+    <string name="error_generic">Error: %1$s</string>
+</resources>
