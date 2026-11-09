@@ -1,15 +1,19 @@
 package com.arcimage.app.data.image
 
+import android.graphics.BitmapFactory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.ByteArrayInputStream
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import javax.imageio.ImageIO
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class BmpAndGifEncoderJvmTest {
 
     @Test
@@ -50,7 +54,7 @@ class BmpAndGifEncoderJvmTest {
     }
 
     @Test
-    fun `GifEncoder produces valid GIF89a image readable by standard ImageIO decoder`() {
+    fun `GifEncoder produces valid GIF89a stream with Logical Screen Descriptor, GCT, LZW blocks, and BitmapFactory decode`() {
         val width = 16
         val height = 12
         val pixels = IntArray(width * height) { i ->
@@ -66,16 +70,27 @@ class BmpAndGifEncoderJvmTest {
         GifEncoder.encodeArgbPixels(width, height, pixels, out)
         val gifBytes = out.toByteArray()
 
-        // Verify GIF89a signature & trailer byte 0x3B
+        // Verify GIF89a signature, Logical Screen Descriptor dimensions, Image Descriptor & trailer byte 0x3B
         val headerAscii = String(gifBytes, 0, 6, Charsets.US_ASCII)
         assertEquals("GIF89a", headerAscii)
-        assertEquals(0x3B, gifBytes.last().toInt() and 0xFF)
+        val lsd = ByteBuffer.wrap(gifBytes).order(ByteOrder.LITTLE_ENDIAN)
+        assertEquals(width, lsd.getShort(6).toInt() and 0xFFFF)
+        assertEquals(height, lsd.getShort(8).toInt() and 0xFFFF)
+        assertEquals(0xF7, gifBytes[10].toInt() and 0xFF) // 256-entry Global Color Table flag
 
-        // Decode with standard JDK ImageIO GIF reader to verify LZW decompression integrity
-        val decodedImage = ImageIO.read(ByteArrayInputStream(gifBytes))
-        assertNotNull("Generated GIF89a stream must decode cleanly via ImageIO", decodedImage)
-        assertEquals(width, decodedImage.width)
-        assertEquals(height, decodedImage.height)
+        // Offset 13 + 768 (GCT) = 781 -> Image Separator 0x2C
+        assertEquals(0x2C, gifBytes[781].toInt() and 0xFF)
+        assertEquals(width, lsd.getShort(786).toInt() and 0xFFFF)
+        assertEquals(height, lsd.getShort(788).toInt() and 0xFFFF)
+        assertEquals(8, gifBytes[791].toInt() and 0xFF) // LZW minimum code size = 8
+        assertEquals(0x00, gifBytes[gifBytes.size - 2].toInt() and 0xFF) // Sub-block terminator
+        assertEquals(0x3B, gifBytes.last().toInt() and 0xFF) // GIF trailer
         assertTrue(gifBytes.size > 800)
+
+        // Verify Android BitmapFactory decodes the generated GIF89a stream
+        val decodedBitmap = BitmapFactory.decodeByteArray(gifBytes, 0, gifBytes.size)
+        assertNotNull("Generated GIF89a stream must decode via Android BitmapFactory", decodedBitmap)
+        assertEquals(width, decodedBitmap.width)
+        assertEquals(height, decodedBitmap.height)
     }
 }
