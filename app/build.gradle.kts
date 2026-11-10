@@ -65,10 +65,13 @@ android {
         }
     }
 
-    // Universal & split ABI support for Googlebook OS x86_64 and ARM64 devices
+    // Universal & split ABI support for Googlebook OS x86_64 and ARM64 devices.
+    // Disabled for App Bundle builds: Play generates per-ABI splits from the .aab itself,
+    // and AGP fails bundling when APK ABI splits are enabled.
+    val isBundleBuild = gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
     splits {
         abi {
-            isEnable = true
+            isEnable = !isBundleBuild
             reset()
             include("arm64-v8a", "x86_64")
             isUniversalApk = true

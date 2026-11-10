@@ -77,10 +77,12 @@ jobs:
           ARCIMAGE_KEYSTORE_PASSWORD: ${{ secrets.ARCIMAGE_KEYSTORE_PASSWORD }}
           ARCIMAGE_KEY_ALIAS: ${{ secrets.ARCIMAGE_KEY_ALIAS }}
           ARCIMAGE_KEY_PASSWORD: ${{ secrets.ARCIMAGE_KEY_PASSWORD }}
-        run: >
-          gradle bundleRelease assembleRelease --stacktrace
-          -PversionCode=${{ steps.version.outputs.code }}
-          -PversionName=${{ steps.version.outputs.name }}
+        run: |
+          set -e
+          VERSION_ARGS="-PversionCode=${{ steps.version.outputs.code }} -PversionName=${{ steps.version.outputs.name }}"
+          # Separate invocations: ABI splits apply to APKs only (AGP can't bundle with splits on)
+          gradle bundleRelease --stacktrace $VERSION_ARGS
+          gradle assembleRelease --stacktrace $VERSION_ARGS
 
       - name: Verify signatures & collect outputs
         run: |
