@@ -48,7 +48,8 @@ data class FileBrowserUiState(
  */
 class FileBrowserViewModel(
     private val appContext: Context,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    private val accessChecker: (Context) -> Boolean = DeviceFileRepository::hasAllFilesAccess
 ) : ViewModel() {
 
     companion object {
@@ -80,7 +81,7 @@ class FileBrowserViewModel(
 
     /** Re-checks the storage permission (e.g. after returning from system settings). */
     fun refreshAccess() {
-        val granted = DeviceFileRepository.hasAllFilesAccess(appContext)
+        val granted = runCatching { accessChecker(appContext) }.getOrDefault(false)
         val roots = if (granted) {
             runCatching { DeviceFileRepository.storageRoots(appContext) }.getOrDefault(emptyList())
         } else {

@@ -219,12 +219,13 @@ class ViewModelsContinuityTest {
     fun `FileBrowserViewModel persists view mode, sort and search across window recreation`() {
         val handle = SavedStateHandle()
         val context = RuntimeEnvironment.getApplication()
-        val vm1 = FileBrowserViewModel(context, handle)
+        val vm1 = FileBrowserViewModel(context, handle, accessChecker = { false })
         vm1.setGridView(true)
         vm1.setSortOrder(FileSortOrder.DATE)
         vm1.setSearchQuery("trip")
 
-        val vm2 = FileBrowserViewModel(context, handle)
+        val vm2 = FileBrowserViewModel(context, handle, accessChecker = { false })
+        assertEquals(false, vm2.uiState.value.hasStorageAccess)
         assertEquals(true, vm2.uiState.value.gridView)
         assertEquals(FileSortOrder.DATE, vm2.uiState.value.sortOrder)
         assertEquals("trip", vm2.uiState.value.searchQuery)
