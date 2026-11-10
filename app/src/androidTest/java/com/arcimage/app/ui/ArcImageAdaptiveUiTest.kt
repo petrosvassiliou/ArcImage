@@ -4,6 +4,8 @@ import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -42,20 +44,36 @@ class ArcImageAdaptiveUiTest {
 
         // Navigate to Image Studio workspace
         val imageStudioLabel = context.getString(R.string.nav_image_studio)
-        composeRule.onNodeWithText(imageStudioLabel).performClick()
+        composeRule.onAllNodesWithText(imageStudioLabel).onFirst().performClick()
 
         val emptyImageTitle = context.getString(R.string.image_empty_title)
         composeRule.onNodeWithText(emptyImageTitle).assertIsDisplayed()
 
         // Navigate back to Archive Manager workspace and switch to Explore Archive mode
         val archiveManagerLabel = context.getString(R.string.nav_archive_manager)
-        composeRule.onNodeWithText(archiveManagerLabel).performClick()
+        composeRule.onAllNodesWithText(archiveManagerLabel).onFirst().performClick()
 
         val exploreModeLabel = context.getString(R.string.archive_mode_explore)
         composeRule.onNodeWithText(exploreModeLabel).performClick()
 
         val emptyExploreTitle = context.getString(R.string.archive_empty_explore_title)
         composeRule.onNodeWithText(emptyExploreTitle).assertIsDisplayed()
+    }
+
+    @Test
+    fun appStartsOnRealDeviceFilesBrowserWithoutSampleContent() {
+        val context = composeRule.activity
+
+        // Default destination is the device "Files" browser (label in nav + top bar subtitle)
+        val filesLabel = context.getString(R.string.nav_files)
+        composeRule.onAllNodesWithText(filesLabel).onFirst().assertIsDisplayed()
+
+        // Without "All files access" the onboarding card is shown - never fictional sample files
+        if (!com.arcimage.app.data.files.DeviceFileRepository.hasAllFilesAccess(context)) {
+            composeRule.onNodeWithText(context.getString(R.string.files_permission_title)).assertIsDisplayed()
+            composeRule.onNodeWithText(context.getString(R.string.files_grant_access)).assertIsDisplayed()
+            composeRule.onNodeWithText(context.getString(R.string.files_open_documents)).assertIsDisplayed()
+        }
     }
 
     @Test
@@ -79,7 +97,7 @@ class ArcImageAdaptiveUiTest {
         composeRule.waitForIdle()
 
         assertEquals("el", AppCompatDelegate.getApplicationLocales().toLanguageTags())
-        composeRule.onNodeWithText("Στούντιο Εικόνας").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Στούντιο Εικόνας").onFirst().assertIsDisplayed()
     }
 
     @Test
