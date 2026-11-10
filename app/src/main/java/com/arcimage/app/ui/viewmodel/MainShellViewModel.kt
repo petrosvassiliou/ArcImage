@@ -18,9 +18,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 data class ShellUiState(
-    val activeDestination: AppDestination = AppDestination.ARCHIVE_MANAGER,
+    val activeDestination: AppDestination = AppDestination.FILES,
     val themePreference: ThemePreference = ThemePreference.SYSTEM,
-    val useDynamicColor: Boolean = true,
+    val useDynamicColor: Boolean = false,
     val showLanguageDialog: Boolean = false,
     val currentLanguage: AppLanguage = AppLanguage.SYSTEM,
     val quickLaunchRequest: QuickLaunchAction? = null
@@ -43,13 +43,13 @@ class MainShellViewModel(
 
     private val initialDestination = savedStateHandle.get<String>(KEY_DESTINATION)
         ?.let { runCatching { AppDestination.valueOf(it) }.getOrNull() }
-        ?: AppDestination.ARCHIVE_MANAGER
+        ?: AppDestination.FILES
 
     private val initialTheme = savedStateHandle.get<String>(KEY_THEME)
         ?.let { runCatching { ThemePreference.valueOf(it) }.getOrNull() }
         ?: ThemePreference.SYSTEM
 
-    private val initialDynamic = savedStateHandle.get<Boolean>(KEY_DYNAMIC_COLOR) ?: true
+    private val initialDynamic = savedStateHandle.get<Boolean>(KEY_DYNAMIC_COLOR) ?: false
 
     private val _uiState = MutableStateFlow(
         ShellUiState(
@@ -125,6 +125,12 @@ object ArcImageViewModelFactory {
             val app = this.arcImageApplication()
             ImageStudioViewModel(
                 imageRepository = app.container.imageRepository,
+                savedStateHandle = createSavedStateHandle()
+            )
+        }
+        initializer {
+            FileBrowserViewModel(
+                appContext = this.arcImageApplication().applicationContext,
                 savedStateHandle = createSavedStateHandle()
             )
         }

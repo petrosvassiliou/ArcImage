@@ -2,10 +2,12 @@ package com.arcimage.app.data.util
 
 import android.content.Context
 import android.net.Uri
+import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
+import com.arcimage.app.data.files.DeviceFileRepository
 import com.arcimage.app.model.SourceItem
 import java.io.File
 import java.io.FileOutputStream
@@ -253,7 +255,22 @@ object DocumentUriHelper {
         return targetContainer.name ?: containerName
     }
 
+    /**
+     * Results are written to the public `Download/ArcImage` folder when ArcImage has been granted
+     * device file access, so they immediately show up in the device file system (and in the
+     * ArcImage Files browser). Falls back to the private app sandbox otherwise.
+     */
     fun getDefaultExportsDir(context: Context): File {
+        if (DeviceFileRepository.hasAllFilesAccess(context)) {
+            @Suppress("DEPRECATION")
+            val publicDir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                "ArcImage"
+            )
+            if ((publicDir.isDirectory || publicDir.mkdirs()) && publicDir.canWrite()) {
+                return publicDir
+            }
+        }
         return File(context.filesDir, "exports").apply { mkdirs() }
     }
 

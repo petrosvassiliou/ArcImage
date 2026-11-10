@@ -128,4 +128,36 @@
     <string name="error_image_decode_failed">Échec du traitement de l\'image : %1$s</string>
     <string name="error_operation_cancelled">Opération annulée.</string>
     <string name="error_generic">Erreur : %1$s</string>
+
+    <!-- Files browser (default home: real device file system) -->
+    <string name="nav_files">Fichiers</string>
+    <string name="files_permission_title">Afficher les fichiers de l\'appareil</string>
+    <string name="files_permission_desc">ArcImage travaille directement avec les fichiers de votre appareil. Autorisez l\'accès aux fichiers pour parcourir les dossiers, ouvrir des archives et modifier des images.</string>
+    <string name="files_grant_access">Autoriser l\'accès</string>
+    <string name="files_open_documents">Ouvrir des fichiers à la place</string>
+    <string name="files_empty_folder">Ce dossier est vide</string>
+    <string name="files_no_results">Aucun fichier correspondant</string>
+    <string name="files_internal_storage">Stockage interne</string>
+    <string name="files_external_storage">Stockage externe</string>
+    <string name="files_quick_downloads">Téléchargements</string>
+    <string name="files_quick_camera">Appareil photo</string>
+    <string name="files_quick_pictures">Images</string>
+    <string name="files_quick_documents">Documents</string>
+    <string name="files_items_count">%1$d éléments</string>
+    <string name="files_selected_count">%1$d sélectionnés</string>
+    <string name="files_search_hint">Rechercher dans ce dossier</string>
+    <string name="files_sort">Trier</string>
+    <string name="files_sort_name">Nom</string>
+    <string name="files_sort_date">Date</string>
+    <string name="files_sort_size">Taille</string>
+    <string name="files_view_grid">Vue grille</string>
+    <string name="files_view_list">Vue liste</string>
+    <string name="files_navigate_up">Remonter</string>
+    <string name="files_refresh">Actualiser</string>
+    <string name="action_compress_selection">Compresser</string>
+    <string name="action_open_in_studio">Modifier les images</string>
+    <string name="action_open_archive">Ouvrir l\'archive</string>
+    <string name="action_open_folder">Ouvrir</string>
+    <string name="action_select">Sélectionner</string>
+    <string name="files_drop_hint">Déposez des fichiers ici pour les ouvrir</string>
 </resources>

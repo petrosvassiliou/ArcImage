@@ -128,4 +128,36 @@
     <string name="error_image_decode_failed">Αποτυχία επεξεργασίας εικόνας: %1$s</string>
     <string name="error_operation_cancelled">Η εργασία ακυρώθηκε.</string>
     <string name="error_generic">Σφάλμα: %1$s</string>
+
+    <!-- Files browser (default home: real device file system) -->
+    <string name="nav_files">Αρχεία</string>
+    <string name="files_permission_title">Προβολή αρχείων συσκευής</string>
+    <string name="files_permission_desc">Το ArcImage δουλεύει απευθείας με τα αρχεία της συσκευής σας. Επιτρέψτε την πρόσβαση σε αρχεία για περιήγηση σε φακέλους, άνοιγμα αρχειοθηκών και επεξεργασία εικόνων.</string>
+    <string name="files_grant_access">Να επιτρέπεται η πρόσβαση</string>
+    <string name="files_open_documents">Άνοιγμα αρχείων αντί αυτού</string>
+    <string name="files_empty_folder">Αυτός ο φάκελος είναι κενός</string>
+    <string name="files_no_results">Δεν βρέθηκαν αρχεία</string>
+    <string name="files_internal_storage">Εσωτερικός χώρος</string>
+    <string name="files_external_storage">Εξωτερικός χώρος</string>
+    <string name="files_quick_downloads">Λήψεις</string>
+    <string name="files_quick_camera">Κάμερα</string>
+    <string name="files_quick_pictures">Εικόνες</string>
+    <string name="files_quick_documents">Έγγραφα</string>
+    <string name="files_items_count">%1$d στοιχεία</string>
+    <string name="files_selected_count">%1$d επιλεγμένα</string>
+    <string name="files_search_hint">Αναζήτηση σε αυτόν τον φάκελο</string>
+    <string name="files_sort">Ταξινόμηση</string>
+    <string name="files_sort_name">Όνομα</string>
+    <string name="files_sort_date">Ημερομηνία</string>
+    <string name="files_sort_size">Μέγεθος</string>
+    <string name="files_view_grid">Προβολή πλέγματος</string>
+    <string name="files_view_list">Προβολή λίστας</string>
+    <string name="files_navigate_up">Επάνω</string>
+    <string name="files_refresh">Ανανέωση</string>
+    <string name="action_compress_selection">Συμπίεση</string>
+    <string name="action_open_in_studio">Επεξεργασία εικόνων</string>
+    <string name="action_open_archive">Άνοιγμα αρχειοθήκης</string>
+    <string name="action_open_folder">Άνοιγμα</string>
+    <string name="action_select">Επιλογή</string>
+    <string name="files_drop_hint">Αποθέστε αρχεία εδώ για να ανοίξουν</string>
 </resources>

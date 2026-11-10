@@ -129,4 +129,36 @@
     <string name="error_image_decode_failed">Failed to process image: %1$s</string>
     <string name="error_operation_cancelled">Operation cancelled.</string>
     <string name="error_generic">Error: %1$s</string>
+
+    <!-- Files browser (default home: real device file system) -->
+    <string name="nav_files">Files</string>
+    <string name="files_permission_title">See your device files</string>
+    <string name="files_permission_desc">ArcImage works directly with the files on your device. Allow file access to browse folders, open archives and edit images in place.</string>
+    <string name="files_grant_access">Allow access</string>
+    <string name="files_open_documents">Open files instead</string>
+    <string name="files_empty_folder">This folder is empty</string>
+    <string name="files_no_results">No matching files</string>
+    <string name="files_internal_storage">Internal storage</string>
+    <string name="files_external_storage">External storage</string>
+    <string name="files_quick_downloads">Downloads</string>
+    <string name="files_quick_camera">Camera</string>
+    <string name="files_quick_pictures">Pictures</string>
+    <string name="files_quick_documents">Documents</string>
+    <string name="files_items_count">%1$d items</string>
+    <string name="files_selected_count">%1$d selected</string>
+    <string name="files_search_hint">Search in this folder</string>
+    <string name="files_sort">Sort</string>
+    <string name="files_sort_name">Name</string>
+    <string name="files_sort_date">Date</string>
+    <string name="files_sort_size">Size</string>
+    <string name="files_view_grid">Grid view</string>
+    <string name="files_view_list">List view</string>
+    <string name="files_navigate_up">Up</string>
+    <string name="files_refresh">Refresh</string>
+    <string name="action_compress_selection">Compress</string>
+    <string name="action_open_in_studio">Edit images</string>
+    <string name="action_open_archive">Open archive</string>
+    <string name="action_open_folder">Open</string>
+    <string name="action_select">Select</string>
+    <string name="files_drop_hint">Drop files here to open them</string>
 </resources>

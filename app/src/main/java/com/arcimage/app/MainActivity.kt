@@ -18,6 +18,7 @@ import com.arcimage.app.ui.components.ArcImageShell
 import com.arcimage.app.ui.theme.ArcImageTheme
 import com.arcimage.app.ui.viewmodel.ArcImageViewModelFactory
 import com.arcimage.app.ui.viewmodel.ArchiveViewModel
+import com.arcimage.app.ui.viewmodel.FileBrowserViewModel
 import com.arcimage.app.ui.viewmodel.ImageStudioViewModel
 import com.arcimage.app.ui.viewmodel.MainShellViewModel
 import com.arcimage.app.ui.viewmodel.QuickLaunchAction
@@ -32,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private val shellViewModel: MainShellViewModel by viewModels { ArcImageViewModelFactory.Factory }
     private val archiveViewModel: ArchiveViewModel by viewModels { ArcImageViewModelFactory.Factory }
     private val imageStudioViewModel: ImageStudioViewModel by viewModels { ArcImageViewModelFactory.Factory }
+    private val fileBrowserViewModel: FileBrowserViewModel by viewModels { ArcImageViewModelFactory.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -52,7 +54,8 @@ class MainActivity : AppCompatActivity() {
                 ArcImageShell(
                     shellViewModel = shellViewModel,
                     archiveViewModel = archiveViewModel,
-                    imageStudioViewModel = imageStudioViewModel
+                    imageStudioViewModel = imageStudioViewModel,
+                    fileBrowserViewModel = fileBrowserViewModel
                 )
             }
         }

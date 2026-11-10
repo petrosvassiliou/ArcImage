@@ -9,4 +9,8 @@
     <external-files-path
         name="arcimage_external"
         path="." />
+    <!-- Public device storage (e.g. Download/ArcImage results) when all-files access is granted -->
+    <external-path
+        name="device_storage"
+        path="." />
 </paths>

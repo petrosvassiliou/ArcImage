@@ -128,4 +128,36 @@
     <string name="error_image_decode_failed">Bildverarbeitung fehlgeschlagen: %1$s</string>
     <string name="error_operation_cancelled">Vorgang abgebrochen.</string>
     <string name="error_generic">Fehler: %1$s</string>
+
+    <!-- Files browser (default home: real device file system) -->
+    <string name="nav_files">Dateien</string>
+    <string name="files_permission_title">Deine Gerätedateien anzeigen</string>
+    <string name="files_permission_desc">ArcImage arbeitet direkt mit den Dateien auf deinem Gerät. Erlaube den Dateizugriff, um Ordner zu durchsuchen, Archive zu öffnen und Bilder direkt zu bearbeiten.</string>
+    <string name="files_grant_access">Zugriff erlauben</string>
+    <string name="files_open_documents">Stattdessen Dateien öffnen</string>
+    <string name="files_empty_folder">Dieser Ordner ist leer</string>
+    <string name="files_no_results">Keine passenden Dateien</string>
+    <string name="files_internal_storage">Interner Speicher</string>
+    <string name="files_external_storage">Externer Speicher</string>
+    <string name="files_quick_downloads">Downloads</string>
+    <string name="files_quick_camera">Kamera</string>
+    <string name="files_quick_pictures">Bilder</string>
+    <string name="files_quick_documents">Dokumente</string>
+    <string name="files_items_count">%1$d Elemente</string>
+    <string name="files_selected_count">%1$d ausgewählt</string>
+    <string name="files_search_hint">In diesem Ordner suchen</string>
+    <string name="files_sort">Sortieren</string>
+    <string name="files_sort_name">Name</string>
+    <string name="files_sort_date">Datum</string>
+    <string name="files_sort_size">Größe</string>
+    <string name="files_view_grid">Rasteransicht</string>
+    <string name="files_view_list">Listenansicht</string>
+    <string name="files_navigate_up">Nach oben</string>
+    <string name="files_refresh">Aktualisieren</string>
+    <string name="action_compress_selection">Komprimieren</string>
+    <string name="action_open_in_studio">Bilder bearbeiten</string>
+    <string name="action_open_archive">Archiv öffnen</string>
+    <string name="action_open_folder">Öffnen</string>
+    <string name="action_select">Auswählen</string>
+    <string name="files_drop_hint">Dateien hier ablegen, um sie zu öffnen</string>
 </resources>

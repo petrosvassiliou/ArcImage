@@ -128,4 +128,36 @@
     <string name="error_image_decode_failed">Impossibile elaborare l\'immagine: %1$s</string>
     <string name="error_operation_cancelled">Operazione annullata.</string>
     <string name="error_generic">Errore: %1$s</string>
+
+    <!-- Files browser (default home: real device file system) -->
+    <string name="nav_files">File</string>
+    <string name="files_permission_title">Mostra i file del dispositivo</string>
+    <string name="files_permission_desc">ArcImage lavora direttamente con i file del tuo dispositivo. Consenti l\'accesso ai file per sfogliare cartelle, aprire archivi e modificare immagini.</string>
+    <string name="files_grant_access">Consenti accesso</string>
+    <string name="files_open_documents">Apri invece dei file</string>
+    <string name="files_empty_folder">Questa cartella è vuota</string>
+    <string name="files_no_results">Nessun file corrispondente</string>
+    <string name="files_internal_storage">Memoria interna</string>
+    <string name="files_external_storage">Memoria esterna</string>
+    <string name="files_quick_downloads">Download</string>
+    <string name="files_quick_camera">Fotocamera</string>
+    <string name="files_quick_pictures">Immagini</string>
+    <string name="files_quick_documents">Documenti</string>
+    <string name="files_items_count">%1$d elementi</string>
+    <string name="files_selected_count">%1$d selezionati</string>
+    <string name="files_search_hint">Cerca in questa cartella</string>
+    <string name="files_sort">Ordina</string>
+    <string name="files_sort_name">Nome</string>
+    <string name="files_sort_date">Data</string>
+    <string name="files_sort_size">Dimensione</string>
+    <string name="files_view_grid">Vista griglia</string>
+    <string name="files_view_list">Vista elenco</string>
+    <string name="files_navigate_up">Su</string>
+    <string name="files_refresh">Aggiorna</string>
+    <string name="action_compress_selection">Comprimi</string>
+    <string name="action_open_in_studio">Modifica immagini</string>
+    <string name="action_open_archive">Apri archivio</string>
+    <string name="action_open_folder">Apri</string>
+    <string name="action_select">Seleziona</string>
+    <string name="files_drop_hint">Trascina qui i file per aprirli</string>
 </resources>

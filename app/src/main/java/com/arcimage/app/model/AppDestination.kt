@@ -6,6 +6,7 @@ import com.arcimage.app.R
 enum class AppDestination(
     @StringRes val labelRes: Int
 ) {
+    FILES(R.string.nav_files),
     ARCHIVE_MANAGER(R.string.nav_archive_manager),
     IMAGE_STUDIO(R.string.nav_image_studio)
 }

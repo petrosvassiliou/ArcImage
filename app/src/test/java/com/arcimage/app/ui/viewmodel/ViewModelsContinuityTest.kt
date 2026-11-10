@@ -3,6 +3,7 @@ package com.arcimage.app.ui.viewmodel
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import com.arcimage.app.data.archive.ArchiveRepository
+import com.arcimage.app.data.files.FileSortOrder
 import com.arcimage.app.data.image.ImageRepository
 import com.arcimage.app.model.AppDestination
 import com.arcimage.app.model.ArchiveEntryItem
@@ -35,6 +36,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -203,5 +205,28 @@ class ViewModelsContinuityTest {
         advanceUntilIdle()
         assertEquals(320_000L, vm.uiState.value.batchItems.first().actualOutputSizeBytes)
         assertNotNull(vm.uiState.value.bannerMessage)
+    }
+
+    @Test
+    fun `App opens on the real device Files browser with brand colours by default`() {
+        val vm = MainShellViewModel(SavedStateHandle())
+        assertEquals(AppDestination.FILES, vm.uiState.value.activeDestination)
+        assertEquals(false, vm.uiState.value.useDynamicColor)
+        assertEquals(AppDestination.FILES, AppDestination.entries.first())
+    }
+
+    @Test
+    fun `FileBrowserViewModel persists view mode, sort and search across window recreation`() {
+        val handle = SavedStateHandle()
+        val context = RuntimeEnvironment.getApplication()
+        val vm1 = FileBrowserViewModel(context, handle)
+        vm1.setGridView(true)
+        vm1.setSortOrder(FileSortOrder.DATE)
+        vm1.setSearchQuery("trip")
+
+        val vm2 = FileBrowserViewModel(context, handle)
+        assertEquals(true, vm2.uiState.value.gridView)
+        assertEquals(FileSortOrder.DATE, vm2.uiState.value.sortOrder)
+        assertEquals("trip", vm2.uiState.value.searchQuery)
     }
 }
