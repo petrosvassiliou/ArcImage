@@ -25,12 +25,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddPhotoAlternate
-import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Folder
@@ -38,6 +38,16 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.rounded.AddPhotoAlternate
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.PhotoSizeSelectLarge
+import androidx.compose.material.icons.rounded.SelectAll
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -74,6 +84,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -95,8 +106,12 @@ import com.arcimage.app.model.ImageFormat
 import com.arcimage.app.model.ResizeMode
 import com.arcimage.app.ui.components.DeterminateProgressDialog
 import com.arcimage.app.ui.components.DropZoneOverlay
+import com.arcimage.app.ui.components.FloatingActionPill
+import com.arcimage.app.ui.components.ModernEmptyState
+import com.arcimage.app.ui.components.RoundedListContainer
 import com.arcimage.app.ui.components.StatusBannerCard
 import com.arcimage.app.ui.components.shareOutputUri
+import com.arcimage.app.ui.theme.ArcBrandGradient
 import com.arcimage.app.ui.util.arcFileDropTarget
 import com.arcimage.app.ui.util.arcHoverable
 import com.arcimage.app.ui.util.arcKeyboardShortcuts
@@ -104,8 +119,8 @@ import com.arcimage.app.ui.util.arcPointerContextActions
 import com.arcimage.app.ui.util.rememberArcHoverState
 import com.arcimage.app.ui.viewmodel.ImageStudioUiState
 import com.arcimage.app.ui.viewmodel.ImageStudioViewModel
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 @Composable
 fun ImageStudioScreen(
@@ -270,24 +285,27 @@ private fun ImageBatchMasterPane(
     onProcessBatch: () -> Unit,
     onDismissBanner: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Top Action Toolbar
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Top Action Toolbar (pill-shaped controls)
         FlowRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilledTonalButton(onClick = onAddImages) {
-                Icon(Icons.Outlined.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
+            FilledTonalButton(onClick = onAddImages, shape = CircleShape) {
+                Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(stringResource(R.string.image_add_photos))
             }
 
             if (isCompactWidth && uiState.batchItems.isNotEmpty()) {
-                OutlinedButton(onClick = onOpenSettingsPane) {
-                    Icon(Icons.Outlined.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+                OutlinedButton(onClick = onOpenSettingsPane, shape = CircleShape) {
+                    Icon(Icons.Rounded.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.image_settings_title))
                 }
@@ -295,7 +313,8 @@ private fun ImageBatchMasterPane(
 
             AssistChip(
                 onClick = onChooseDestination,
-                leadingIcon = { Icon(Icons.Outlined.Folder, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                shape = CircleShape,
+                leadingIcon = { Icon(Icons.Rounded.Folder, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 label = {
                     Text(
                         text = uiState.destinationLabel
@@ -309,24 +328,26 @@ private fun ImageBatchMasterPane(
             if (uiState.selectedIds.isNotEmpty()) {
                 AssistChip(
                     onClick = onClearSelection,
+                    shape = CircleShape,
+                    leadingIcon = { Icon(Icons.Rounded.Close, contentDescription = null, modifier = Modifier.size(16.dp)) },
                     label = { Text(stringResource(R.string.selected_count_format, uiState.selectedIds.size)) }
                 )
                 IconButton(onClick = onRemoveSelected) {
                     Icon(
-                        imageVector = Icons.Outlined.DeleteOutline,
+                        imageVector = Icons.Rounded.DeleteOutline,
                         contentDescription = stringResource(R.string.action_remove_selected)
                     )
                 }
             } else if (uiState.batchItems.isNotEmpty()) {
                 IconButton(onClick = onSelectAll) {
                     Icon(
-                        imageVector = Icons.Outlined.SelectAll,
+                        imageVector = Icons.Rounded.SelectAll,
                         contentDescription = stringResource(R.string.action_select_all)
                     )
                 }
                 IconButton(onClick = onClearBatch) {
                     Icon(
-                        imageVector = Icons.Outlined.DeleteSweep,
+                        imageVector = Icons.Rounded.DeleteSweep,
                         contentDescription = stringResource(R.string.image_clear_batch)
                     )
                 }
@@ -338,90 +359,64 @@ private fun ImageBatchMasterPane(
             onDismiss = onDismissBanner
         )
 
-        // Responsive Grid Preview
-        Box(modifier = Modifier.weight(1f)) {
+        // Responsive Grid Preview with floating batch action pill
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (uiState.batchItems.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Image,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.image_empty_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.image_empty_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(20.dp))
-                    Button(onClick = onAddImages) {
-                        Text(stringResource(R.string.image_add_photos))
-                    }
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 168.dp),
-                    contentPadding = PaddingValues(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ModernEmptyState(
+                    icon = Icons.Rounded.Image,
+                    title = stringResource(R.string.image_empty_title),
+                    description = stringResource(R.string.image_empty_desc),
+                    primaryText = stringResource(R.string.image_add_photos),
+                    onPrimary = onAddImages,
                     modifier = Modifier.fillMaxSize()
-                ) {
-                    items(uiState.batchItems, key = { it.id }) { item ->
-                        val estimatedOrActual = item.actualOutputSizeBytes ?: estimateItemSize(item)
-                        val (targetW, targetH) = uiState.config.computeTargetDimensions(
-                            item.originalWidth,
-                            item.originalHeight
-                        )
-                        ImageGridCard(
-                            item = item,
-                            targetDimensions = "${item.outputWidth ?: targetW}×${item.outputHeight ?: targetH}",
-                            targetFormatLabel = uiState.config.outputFormat.displayName,
-                            comparedBytes = estimatedOrActual,
-                            isSelected = item.id in uiState.selectedIds,
-                            isFocused = item.id == uiState.focusedItemId,
-                            onPrimaryClick = { onFocusAndInspect(item.id) },
-                            onToggleSelect = { onToggleSelect(item.id) },
-                            onSelectAll = onSelectAll,
-                            onRemove = { onRemoveSingle(item.id) }
-                        )
+                )
+            } else {
+                RoundedListContainer(modifier = Modifier.fillMaxSize()) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 168.dp),
+                        contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 96.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(uiState.batchItems, key = { it.id }) { item ->
+                            val estimatedOrActual = item.actualOutputSizeBytes ?: estimateItemSize(item)
+                            val (targetW, targetH) = uiState.config.computeTargetDimensions(
+                                item.originalWidth,
+                                item.originalHeight
+                            )
+                            ImageGridCard(
+                                item = item,
+                                targetDimensions = "${item.outputWidth ?: targetW}×${item.outputHeight ?: targetH}",
+                                targetFormatLabel = uiState.config.outputFormat.displayName,
+                                comparedBytes = estimatedOrActual,
+                                isSelected = item.id in uiState.selectedIds,
+                                isFocused = item.id == uiState.focusedItemId,
+                                onPrimaryClick = { onFocusAndInspect(item.id) },
+                                onToggleSelect = { onToggleSelect(item.id) },
+                                onSelectAll = onSelectAll,
+                                onRemove = { onRemoveSingle(item.id) }
+                            )
+                        }
                     }
                 }
-            }
-        }
 
-        // Bottom Batch Action Bar
-        if (uiState.batchItems.isNotEmpty()) {
-            val countToProcess = if (uiState.selectedIds.isNotEmpty()) {
-                uiState.selectedIds.size
-            } else {
-                uiState.batchItems.size
-            }
-            Surface(
-                tonalElevation = 3.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
+                // Floating Batch Action Pill
+                val countToProcess = if (uiState.selectedIds.isNotEmpty()) {
+                    uiState.selectedIds.size
+                } else {
+                    uiState.batchItems.size
+                }
+                FloatingActionPill(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .padding(start = 8.dp, end = 4.dp)
+                    ) {
                         Text(
                             text = stringResource(
                                 R.string.image_savings_badge,
@@ -433,16 +428,18 @@ private fun ImageBatchMasterPane(
                                 )
                             ),
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = "${uiState.config.outputFormat.displayName} • ${uiState.config.quality}%",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            maxLines = 1
                         )
                     }
-                    Button(onClick = onProcessBatch) {
-                        Icon(Icons.Outlined.AutoFixHigh, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Button(onClick = onProcessBatch, shape = CircleShape) {
+                        Icon(Icons.Rounded.PhotoSizeSelectLarge, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.image_process_batch, countToProcess))
                     }
@@ -471,16 +468,14 @@ private fun ImageGridCard(
     var menuOffset by remember { mutableStateOf<Offset?>(null) }
 
     Box {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(
-                width = if (isFocused || isSelected || isHovered) 2.dp else 1.dp,
-                color = when {
-                    isSelected || isFocused -> MaterialTheme.colorScheme.primary
-                    isHovered -> MaterialTheme.colorScheme.secondary
-                    else -> MaterialTheme.colorScheme.outlineVariant
-                }
-            ),
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = when {
+                isSelected -> MaterialTheme.colorScheme.secondaryContainer
+                isHovered || isFocused -> MaterialTheme.colorScheme.surfaceContainerHigh
+                else -> MaterialTheme.colorScheme.surfaceContainer
+            },
+            border = if (isFocused) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
             modifier = Modifier
                 .fillMaxWidth()
                 .arcHoverable(hoverSource)
@@ -490,11 +485,12 @@ private fun ImageGridCard(
                     onContextMenuRequested = { offset -> menuOffset = offset }
                 )
         ) {
-            Column {
+            Column(modifier = Modifier.padding(8.dp)) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1.3f)
+                        .clip(MaterialTheme.shapes.medium)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     AsyncImage(
@@ -509,12 +505,12 @@ private fun ImageGridCard(
                         onCheckedChange = { onToggleSelect() },
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(4.dp)
+                            .padding(2.dp)
                     )
 
                     Surface(
-                        color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.82f),
-                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.85f),
+                        shape = CircleShape,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
@@ -522,8 +518,9 @@ private fun ImageGridCard(
                         Text(
                             text = targetFormatLabel,
                             style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.inverseOnSurface,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                         )
                     }
                 }
@@ -531,8 +528,8 @@ private fun ImageGridCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                        .padding(start = 6.dp, end = 6.dp, top = 10.dp, bottom = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
                         text = item.name,
@@ -571,11 +568,12 @@ private fun ImageGridCard(
             DropdownMenu(
                 expanded = true,
                 onDismissRequest = { menuOffset = null },
-                offset = with(density) { DpOffset(pos.x.toDp(), 0.dp) }
+                offset = with(density) { DpOffset(pos.x.toDp(), 0.dp) },
+                shape = MaterialTheme.shapes.medium
             ) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_inspect)) },
-                    leadingIcon = { Icon(Icons.Outlined.Tune, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Rounded.Tune, contentDescription = null) },
                     onClick = {
                         menuOffset = null
                         onPrimaryClick()
@@ -584,7 +582,7 @@ private fun ImageGridCard(
                 if (item.outputUri != null) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_share)) },
-                        leadingIcon = { Icon(Icons.Outlined.Share, contentDescription = null) },
+                        leadingIcon = { Icon(Icons.Rounded.Share, contentDescription = null) },
                         onClick = {
                             menuOffset = null
                             shareOutputUri(context, item.outputUri)
@@ -593,7 +591,7 @@ private fun ImageGridCard(
                 }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_select_all)) },
-                    leadingIcon = { Icon(Icons.Outlined.SelectAll, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Rounded.SelectAll, contentDescription = null) },
                     onClick = {
                         menuOffset = null
                         onSelectAll()
@@ -601,13 +599,39 @@ private fun ImageGridCard(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_remove)) },
-                    leadingIcon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Rounded.DeleteOutline, contentDescription = null) },
                     onClick = {
                         menuOffset = null
                         onRemove()
                     }
                 )
             }
+        }
+    }
+}
+
+/** Rounded tonal tile grouping one block of settings, matching the Files screen panels. */
+@Composable
+private fun SettingsSection(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            content()
         }
     }
 }
@@ -627,8 +651,8 @@ private fun ImageSettingsDetailPane(
     onProcessBatch: () -> Unit
 ) {
     Surface(
-        tonalElevation = 1.dp,
-        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier
             .fillMaxSize()
             .padding(12.dp)
@@ -636,77 +660,100 @@ private fun ImageSettingsDetailPane(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = stringResource(R.string.image_settings_title),
-                style = MaterialTheme.typography.titleLarge
-            )
-            HorizontalDivider()
-
-            // Before / After Comparison Summary Card
-            if (uiState.batchItems.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
+                    Icon(
+                        Icons.Rounded.Tune,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.image_settings_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Before / After Comparison Summary (brand gradient card)
+            if (uiState.batchItems.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .background(ArcBrandGradient)
+                        .padding(18.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = stringResource(R.string.image_comparison_title),
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            color = Color.White.copy(alpha = 0.9f)
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
                         ) {
                             Column {
                                 Text(
                                     text = stringResource(R.string.image_original_label),
-                                    style = MaterialTheme.typography.labelSmall
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.8f)
                                 )
                                 Text(
                                     text = FileSizeFormatter.formatBytes(uiState.totalOriginalBytes),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
                                 )
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
                                     text = stringResource(R.string.image_estimated_or_actual_label),
-                                    style = MaterialTheme.typography.labelSmall
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.8f)
                                 )
                                 Text(
-                                    text = "${FileSizeFormatter.formatBytes(uiState.estimatedTotalOutputBytes)} (${
-                                        FileSizeFormatter.formatDeltaPercent(
-                                            uiState.totalOriginalBytes,
-                                            uiState.estimatedTotalOutputBytes
-                                        )
-                                    })",
-                                    style = MaterialTheme.typography.titleMedium,
+                                    text = FileSizeFormatter.formatBytes(uiState.estimatedTotalOutputBytes),
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = Color.White
                                 )
                             }
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.22f),
+                            contentColor = Color.White
+                        ) {
+                            Text(
+                                text = FileSizeFormatter.formatDeltaPercent(
+                                    uiState.totalOriginalBytes,
+                                    uiState.estimatedTotalOutputBytes
+                                ),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
                         }
                     }
                 }
             }
 
             // 1. Resize Mode Selector
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(R.string.image_resize_mode_label),
-                    style = MaterialTheme.typography.titleMedium
-                )
+            SettingsSection(title = stringResource(R.string.image_resize_mode_label)) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -715,6 +762,7 @@ private fun ImageSettingsDetailPane(
                         FilterChip(
                             selected = uiState.config.resizeMode == mode,
                             onClick = { onSelectResizeMode(mode) },
+                            shape = CircleShape,
                             label = { Text(stringResource(mode.labelRes)) }
                         )
                     }
@@ -729,6 +777,7 @@ private fun ImageSettingsDetailPane(
                         label = { Text(stringResource(R.string.image_custom_percent_label)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
+                        shape = MaterialTheme.shapes.medium,
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else if (uiState.config.resizeMode == ResizeMode.EXACT_PIXELS) {
@@ -744,6 +793,7 @@ private fun ImageSettingsDetailPane(
                             label = { Text(stringResource(R.string.image_width_px_label)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
+                            shape = MaterialTheme.shapes.medium,
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
@@ -754,15 +804,13 @@ private fun ImageSettingsDetailPane(
                             label = { Text(stringResource(R.string.image_height_px_label)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
+                            shape = MaterialTheme.shapes.medium,
                             modifier = Modifier.weight(1f)
                         )
                     }
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .padding(vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -779,11 +827,7 @@ private fun ImageSettingsDetailPane(
             }
 
             // 2. Output Format Conversion Selector
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(R.string.image_target_format_label),
-                    style = MaterialTheme.typography.titleMedium
-                )
+            SettingsSection(title = stringResource(R.string.image_target_format_label)) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -792,6 +836,7 @@ private fun ImageSettingsDetailPane(
                         FilterChip(
                             selected = uiState.config.outputFormat == fmt,
                             onClick = { onSelectFormat(fmt) },
+                            shape = CircleShape,
                             label = { Text(fmt.displayName) }
                         )
                     }
@@ -799,11 +844,7 @@ private fun ImageSettingsDetailPane(
             }
 
             // 3. Quality / Compression Slider (1–100%) + Estimated Output Size
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = stringResource(R.string.image_quality_label, uiState.config.quality),
-                    style = MaterialTheme.typography.titleMedium
-                )
+            SettingsSection(title = stringResource(R.string.image_quality_label, uiState.config.quality)) {
                 Slider(
                     value = uiState.config.quality.toFloat(),
                     onValueChange = { onChangeQuality(it.roundToInt()) },
@@ -821,31 +862,40 @@ private fun ImageSettingsDetailPane(
             }
 
             // 4. Preserve vs Strip EXIF Metadata Toggle
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                    Text(
-                        text = stringResource(R.string.image_preserve_exif_label),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = stringResource(R.string.image_preserve_exif_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text(
+                            text = stringResource(R.string.image_preserve_exif_label),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = stringResource(R.string.image_preserve_exif_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = uiState.config.preserveExif,
+                        onCheckedChange = onTogglePreserveExif,
+                        enabled = uiState.config.outputFormat.supportsExifMetadata
                     )
                 }
-                Switch(
-                    checked = uiState.config.preserveExif,
-                    onCheckedChange = onTogglePreserveExif,
-                    enabled = uiState.config.outputFormat.supportsExifMetadata
-                )
             }
 
             if (uiState.batchItems.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 val targetCount = if (uiState.selectedIds.isNotEmpty()) {
                     uiState.selectedIds.size
                 } else {
@@ -853,9 +903,11 @@ private fun ImageSettingsDetailPane(
                 }
                 Button(
                     onClick = onProcessBatch,
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Outlined.AutoFixHigh, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.PhotoSizeSelectLarge, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.image_process_batch, targetCount))
                 }
