@@ -117,58 +117,64 @@ class ArcImageAdaptiveUiTest {
     @Test
     fun hardwareKeyboardShortcutsWorkWithoutManualFocus() {
         val activity = composeRule.activity
+        val originalIntent = activity.intent
         val tempFile = File(activity.cacheDir, "shortcut_verify.txt").apply {
             writeText("keyboard shortcut verification")
         }
 
-        // Route a real file into Archive Manager without touching or focusing any list element
-        composeRule.runOnUiThread {
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_STREAM, Uri.fromFile(tempFile))
+        try {
+            // Route a real file into Archive Manager without touching or focusing any list element
+            composeRule.runOnUiThread {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_STREAM, Uri.fromFile(tempFile))
+                }
+                InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(activity, shareIntent)
             }
-            InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(activity, shareIntent)
-        }
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodesWithText("shortcut_verify.txt").fetchSemanticsNodes().isNotEmpty()
-        }
-        composeRule.onNodeWithText("shortcut_verify.txt").assertIsDisplayed()
+            composeRule.waitUntil(timeoutMillis = 5_000) {
+                composeRule.onAllNodesWithText("shortcut_verify.txt").fetchSemanticsNodes().isNotEmpty()
+            }
+            composeRule.onNodeWithText("shortcut_verify.txt").assertIsDisplayed()
 
-        // Press Ctrl+A (Select All) directly on the Activity without focusing any Compose node first
-        composeRule.runOnUiThread {
-            activity.dispatchKeyEvent(
-                KeyEvent(0L, 0L, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A, 0, KeyEvent.META_CTRL_ON)
-            )
-            activity.dispatchKeyEvent(
-                KeyEvent(0L, 0L, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_A, 0, KeyEvent.META_CTRL_ON)
-            )
-        }
-        composeRule.waitForIdle()
-        val selectedLabel = activity.getString(R.string.selected_count_format, 1)
-        composeRule.onNodeWithText(selectedLabel).assertIsDisplayed()
+            // Press Ctrl+A (Select All) directly on the Activity without focusing any Compose node first
+            composeRule.runOnUiThread {
+                activity.dispatchKeyEvent(
+                    KeyEvent(0L, 0L, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A, 0, KeyEvent.META_CTRL_ON)
+                )
+                activity.dispatchKeyEvent(
+                    KeyEvent(0L, 0L, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_A, 0, KeyEvent.META_CTRL_ON)
+                )
+            }
+            composeRule.waitForIdle()
+            val selectedLabel = activity.getString(R.string.selected_count_format, 1)
+            composeRule.onNodeWithText(selectedLabel).assertIsDisplayed()
 
-        // Press Esc (Clear Selection) -> selection pill disappears, item remains
-        composeRule.runOnUiThread {
-            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE))
-            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE))
-        }
-        composeRule.waitForIdle()
-        composeRule.onNodeWithText("shortcut_verify.txt").assertIsDisplayed()
+            // Press Esc (Clear Selection) -> selection pill disappears, item remains
+            composeRule.runOnUiThread {
+                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE))
+                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE))
+            }
+            composeRule.waitForIdle()
+            composeRule.onNodeWithText("shortcut_verify.txt").assertIsDisplayed()
 
-        // Press Ctrl+A then Delete/Entf (KEYCODE_FORWARD_DEL) -> removes item and shows empty state
-        composeRule.runOnUiThread {
-            activity.dispatchKeyEvent(
-                KeyEvent(0L, 0L, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A, 0, KeyEvent.META_CTRL_ON)
-            )
+            // Press Ctrl+A then Delete/Entf (KEYCODE_FORWARD_DEL) -> removes item and shows empty state
+            composeRule.runOnUiThread {
+                activity.dispatchKeyEvent(
+                    KeyEvent(0L, 0L, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A, 0, KeyEvent.META_CTRL_ON)
+                )
+            }
+            composeRule.waitForIdle()
+            composeRule.runOnUiThread {
+                activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_FORWARD_DEL))
+            }
+            composeRule.waitForIdle()
+            composeRule.onNodeWithText(activity.getString(R.string.archive_empty_compress_title)).assertIsDisplayed()
+        } finally {
+            composeRule.runOnUiThread {
+                activity.intent = originalIntent
+            }
+            tempFile.delete()
         }
-        composeRule.waitForIdle()
-        composeRule.runOnUiThread {
-            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_FORWARD_DEL))
-        }
-        composeRule.waitForIdle()
-        composeRule.onNodeWithText(activity.getString(R.string.archive_empty_compress_title)).assertIsDisplayed()
-
-        tempFile.delete()
     }
 
     @Test
