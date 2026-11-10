@@ -13,8 +13,9 @@ android {
         applicationId = "com.arcimage.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        // CI overrides these via -PversionCode / -PversionName (e.g. from a v1.2.3 tag)
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("versionName") as String?) ?: "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -22,6 +23,29 @@ android {
     // Configure supported locales matching res/xml/locales_config.xml
     androidResources {
         localeFilters += listOf("en", "de", "it", "fr", "es", "el")
+    }
+
+    // Release signing: credentials come from environment variables (GitHub Actions secrets)
+    // or ~/.gradle/gradle.properties — never from the repository.
+    fun signingValue(name: String): String? =
+        System.getenv(name)?.takeIf { it.isNotBlank() }
+            ?: (project.findProperty(name) as String?)?.takeIf { it.isNotBlank() }
+
+    val releaseKeystorePath = signingValue("ARCIMAGE_KEYSTORE_PATH")
+    val hasReleaseSigning = releaseKeystorePath != null && file(releaseKeystorePath).exists()
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = signingValue("ARCIMAGE_KEYSTORE_PASSWORD")
+                keyAlias = signingValue("ARCIMAGE_KEY_ALIAS")
+                keyPassword = signingValue("ARCIMAGE_KEY_PASSWORD")
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
     }
 
     buildTypes {
@@ -32,6 +56,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isMinifyEnabled = false

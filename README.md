@@ -48,3 +48,22 @@ gradle lintDebug
 # Build Universal + arm64-v8a + x86_64 APKs
 gradle assembleDebug assembleRelease
 ```
+
+## Signed Releases
+
+Release builds are signed with the ArcImage **upload key**, stored as GitHub Actions secrets
+(`ARCIMAGE_KEYSTORE_BASE64`, `ARCIMAGE_KEYSTORE_PASSWORD`, `ARCIMAGE_KEY_ALIAS`, `ARCIMAGE_KEY_PASSWORD`).
+The keystore is never committed (`*.jks` is git-ignored).
+
+```bash
+# Publish a release: builds a signed .aab + signed APKs (universal, arm64-v8a, x86_64)
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+- `versionName` comes from the tag; `versionCode = MAJOR*10000 + MINOR*100 + PATCH` (v1.2.3 → 10203).
+- Run **ArcImage Signed Release** manually from the Actions tab to build the files without publishing a release.
+- Local signed build: set `ARCIMAGE_KEYSTORE_PATH` and the three password/alias values as environment
+  variables or in `~/.gradle/gradle.properties`, then run `gradle bundleRelease assembleRelease`.
+  Without them, release builds are produced unsigned.
+- For Google Play, enroll in **Play App Signing** and upload the `.aab`; Google holds the app signing key,
+  so a lost upload key can be reset.
