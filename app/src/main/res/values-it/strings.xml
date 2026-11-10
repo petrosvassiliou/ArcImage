@@ -160,4 +160,30 @@
     <string name="action_open_folder">Apri</string>
     <string name="action_select">Seleziona</string>
     <string name="files_drop_hint">Trascina qui i file per aprirli</string>
+
+    <!-- Navigation, Archive Info & Play-Protect-Safe Updates -->
+    <string name="action_back">Indietro</string>
+    <string name="archive_destination_label">Cartella di destinazione</string>
+    <string name="archive_browse_folder">Scegli cartella…</string>
+    <string name="archive_select_this_folder">Usa questa cartella</string>
+    <string name="archive_system_folder_picker">Selettore di sistema…</string>
+    <string name="archive_info_title">Info archivio</string>
+    <string name="archive_file_size_label">Dimensione archivio</string>
+    <string name="archive_total_unpacked_label">Totale estratto</string>
+    <string name="archive_contents_header">Contenuto archivio</string>
+    <string name="archive_selected_entry_title">Elemento selezionato</string>
+    <string name="action_updates">Aggiornamenti</string>
+    <string name="update_dialog_title">Aggiornamenti app</string>
+    <string name="update_current_version">Versione installata: v%1$s</string>
+    <string name="update_auto_check_label">Controllo automatico aggiornamenti</string>
+    <string name="update_auto_check_desc">Controlla automaticamente gli aggiornamenti all\'avvio</string>
+    <string name="update_check_now">Controlla aggiornamenti</string>
+    <string name="update_checking">Controllo aggiornamenti in corso…</string>
+    <string name="update_up_to_date">ArcImage è aggiornato (v%1$s)</string>
+    <string name="update_available_title">Aggiornamento disponibile: v%1$s</string>
+    <string name="update_available_play">È disponibile un aggiornamento su Google Play</string>
+    <string name="update_install_now">Aggiorna ora</string>
+    <string name="update_ready_restart">Aggiornamento scaricato — Riavvia per applicare</string>
+    <string name="update_check_failed">Impossibile controllare gli aggiornamenti ora</string>
+    <string name="update_play_protect_note">Gli aggiornamenti vengono forniti tramite Google Play o il browser di sistema con verifica Google Play Protect.</string>
 </resources>

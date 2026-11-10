@@ -14,8 +14,8 @@ android {
         minSdk = 28
         targetSdk = 36
         // CI overrides these via -PversionCode / -PversionName (e.g. from a v1.2.3 tag)
-        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
-        versionName = (project.findProperty("versionName") as String?) ?: "1.0.0"
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 2
+        versionName = (project.findProperty("versionName") as String?) ?: "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -152,6 +152,10 @@ dependencies {
     // Jetpack Glance AppWidget with Material 3 (Googlebook OS Desktop & Android Homescreen Widget)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+
+    // Official Google Play In-App Updates (Play Store & Play Protect compliant update delivery)
+    implementation(libs.play.app.update)
+    implementation(libs.play.app.update.ktx)
 
     // Storage, Recursive Folder Access, EXIF Metadata & HEIC/HEIF Encoding
     implementation(libs.androidx.documentfile)

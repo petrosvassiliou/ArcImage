@@ -218,10 +218,22 @@ class ArchiveRepositoryImpl(
             ?: throw IllegalArgumentException(displayName)
 
         val folderStem = stripArchiveExtension(displayName).ifBlank { "Extracted_Archive" }
-        val localExtractRoot = if (destinationTreeUri != null) {
-            File(context.cacheDir, "extract_${UUID.randomUUID()}/$folderStem").apply { mkdirs() }
-        } else {
-            File(DocumentUriHelper.getDefaultExportsDir(context), folderStem).apply { mkdirs() }
+        val isSafDestination = destinationTreeUri != null && destinationTreeUri.scheme != "file"
+        val localExtractRoot = when {
+            destinationTreeUri != null && destinationTreeUri.scheme == "file" -> {
+                val baseDir = File(destinationTreeUri.path ?: "").takeIf {
+                    (it.isDirectory || it.mkdirs()) && it.canWrite()
+                } ?: DocumentUriHelper.getDefaultExportsDir(context)
+                File(baseDir, folderStem).apply { mkdirs() }
+            }
+
+            isSafDestination -> {
+                File(context.cacheDir, "extract_${UUID.randomUUID()}/$folderStem").apply { mkdirs() }
+            }
+
+            else -> {
+                File(DocumentUriHelper.getDefaultExportsDir(context), folderStem).apply { mkdirs() }
+            }
         }
 
         try {
@@ -284,7 +296,7 @@ class ArchiveRepositoryImpl(
 
             currentCoroutineContext().ensureActive()
 
-            val finalDestinationLabel = if (destinationTreeUri != null) {
+            val finalDestinationLabel = if (isSafDestination && destinationTreeUri != null) {
                 DocumentUriHelper.copyDirectoryToSafTree(context, localExtractRoot, destinationTreeUri)
             } else {
                 localExtractRoot.name
@@ -302,7 +314,7 @@ class ArchiveRepositoryImpl(
                 )
             )
         } finally {
-            if (destinationTreeUri != null) {
+            if (isSafDestination) {
                 localExtractRoot.parentFile?.deleteRecursively()
             }
         }

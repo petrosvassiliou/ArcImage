@@ -17,6 +17,7 @@ import com.arcimage.app.model.ArchivePasswordRequiredException
 import com.arcimage.app.model.ArchiveWorkspaceMode
 import com.arcimage.app.model.CompressionConfig
 import com.arcimage.app.model.SourceItem
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,6 +54,7 @@ data class ArchiveUiState(
     val focusedSourceId: String? = null,
     val currentArchiveUri: Uri? = null,
     val currentArchiveName: String = "",
+    val currentArchiveSizeBytes: Long = 0L,
     val unlockedPassword: String? = null,
     val archiveEntries: List<ArchiveEntryItem> = emptyList(),
     val selectedEntryPaths: Set<String> = emptySet(),
@@ -93,10 +95,12 @@ class ArchiveViewModel(
         private const val KEY_SOURCES = "archive_source_items"
         private const val KEY_ARCHIVE_URI = "archive_current_uri"
         private const val KEY_ARCHIVE_NAME = "archive_current_name"
+        private const val KEY_ARCHIVE_SIZE = "archive_current_size_bytes"
         private const val KEY_ENTRIES = "archive_entries_list"
         private const val KEY_CONFIG = "archive_compression_config"
         private const val KEY_SEARCH = "archive_search_query"
         private const val KEY_DEST_URI = "archive_dest_tree_uri"
+        private const val KEY_DEST_LABEL = "archive_dest_label"
     }
 
     private var activeJob: Job? = null
@@ -111,10 +115,12 @@ class ArchiveViewModel(
         val sources = savedStateHandle.get<ArrayList<SourceItem>>(KEY_SOURCES) ?: emptyList()
         val archiveUri = savedStateHandle.get<Uri>(KEY_ARCHIVE_URI)
         val archiveName = savedStateHandle.get<String>(KEY_ARCHIVE_NAME) ?: ""
+        val archiveSize = savedStateHandle.get<Long>(KEY_ARCHIVE_SIZE) ?: 0L
         val entries = savedStateHandle.get<ArrayList<ArchiveEntryItem>>(KEY_ENTRIES) ?: emptyList()
         val config = savedStateHandle.get<CompressionConfig>(KEY_CONFIG) ?: CompressionConfig()
         val search = savedStateHandle.get<String>(KEY_SEARCH) ?: ""
         val destUri = savedStateHandle.get<Uri>(KEY_DEST_URI)
+        val destLabel = savedStateHandle.get<String>(KEY_DEST_LABEL)
 
         return ArchiveUiState(
             mode = mode,
@@ -122,11 +128,13 @@ class ArchiveViewModel(
             focusedSourceId = sources.firstOrNull()?.id,
             currentArchiveUri = archiveUri,
             currentArchiveName = archiveName,
+            currentArchiveSizeBytes = archiveSize,
             archiveEntries = entries,
             focusedEntryPath = entries.firstOrNull()?.path,
             compressionConfig = config,
             searchQuery = search,
-            destinationTreeUri = destUri
+            destinationTreeUri = destUri,
+            destinationLabel = destLabel
         )
     }
 
@@ -135,10 +143,12 @@ class ArchiveViewModel(
         savedStateHandle[KEY_SOURCES] = ArrayList(state.sourceItems)
         savedStateHandle[KEY_ARCHIVE_URI] = state.currentArchiveUri
         savedStateHandle[KEY_ARCHIVE_NAME] = state.currentArchiveName
+        savedStateHandle[KEY_ARCHIVE_SIZE] = state.currentArchiveSizeBytes
         savedStateHandle[KEY_ENTRIES] = ArrayList(state.archiveEntries)
         savedStateHandle[KEY_CONFIG] = state.compressionConfig
         savedStateHandle[KEY_SEARCH] = state.searchQuery
         savedStateHandle[KEY_DEST_URI] = state.destinationTreeUri
+        savedStateHandle[KEY_DEST_LABEL] = state.destinationLabel
     }
 
     fun setMode(mode: ArchiveWorkspaceMode) {
@@ -165,16 +175,73 @@ class ArchiveViewModel(
             val resolved = archiveRepository.resolveSourceItems(uris)
             _uiState.update { state ->
                 val merged = (state.sourceItems + resolved).distinctBy { it.id }
+                val suggestedName = suggestArchiveBaseName(merged, state.compressionConfig.archiveBaseName)
                 val updated = state.copy(
                     mode = ArchiveWorkspaceMode.COMPRESS,
                     sourceItems = merged,
                     focusedSourceId = state.focusedSourceId ?: merged.firstOrNull()?.id,
+                    compressionConfig = state.compressionConfig.copy(archiveBaseName = suggestedName),
                     bannerMessage = null
                 )
                 persistSnapshot(updated)
                 updated
             }
         }
+    }
+
+    /**
+     * Triggered when the user selects "Compress" on one or more files/folders in the Files browser:
+     * queues those items, pre-fills a smart archive name & parent destination folder, and opens
+     * the compression dialog asking for destination folder, archive name, and archive type.
+     */
+    fun prepareCompressionFromFiles(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            val resolved = archiveRepository.resolveSourceItems(uris)
+            val parentDir = uris.firstOrNull()
+                ?.takeIf { it.scheme == "file" }
+                ?.path
+                ?.let { File(it).parentFile }
+                ?.takeIf { it.isDirectory && it.canWrite() }
+
+            val suggestedName = suggestArchiveBaseName(resolved, "")
+            _uiState.update { state ->
+                val destUri = parentDir?.let { Uri.fromFile(it) } ?: state.destinationTreeUri
+                val destLabel = parentDir?.name?.ifBlank { parentDir.absolutePath } ?: state.destinationLabel
+                val updated = state.copy(
+                    mode = ArchiveWorkspaceMode.COMPRESS,
+                    sourceItems = resolved,
+                    selectedSourceIds = emptySet(),
+                    focusedSourceId = resolved.firstOrNull()?.id,
+                    destinationTreeUri = destUri,
+                    destinationLabel = destLabel,
+                    compressionConfig = state.compressionConfig.copy(archiveBaseName = suggestedName),
+                    showCompressionDialog = true,
+                    bannerMessage = null
+                )
+                persistSnapshot(updated)
+                updated
+            }
+        }
+    }
+
+    private fun suggestArchiveBaseName(items: List<SourceItem>, existingName: String): String {
+        if (existingName.isNotBlank() && existingName != "ArcImage_Archive") {
+            return existingName
+        }
+        val single = items.singleOrNull()
+        if (single != null) {
+            val raw = single.name.trim()
+            val stem = if (single.isDirectory) raw else raw.substringBeforeLast('.', raw)
+            if (stem.isNotBlank()) return stem
+        }
+        val firstParent = items.firstOrNull()
+            ?.uri
+            ?.takeIf { it.scheme == "file" }
+            ?.path
+            ?.let { File(it).parentFile?.name }
+            ?.takeIf { it.isNotBlank() && it != "0" }
+        return firstParent ?: "ArcImage_Archive"
     }
 
     fun handleDroppedOrSharedArchiveUris(uris: List<Uri>) {
@@ -207,6 +274,7 @@ class ArchiveViewModel(
         activeJob = viewModelScope.launch {
             val resolvedItem = archiveRepository.resolveSourceItems(listOf(uri)).firstOrNull()
             val displayName = resolvedItem?.name ?: "Archive"
+            val archiveSizeBytes = resolvedItem?.sizeBytes ?: 0L
 
             _uiState.update {
                 it.copy(
@@ -226,6 +294,7 @@ class ArchiveViewModel(
                         mode = ArchiveWorkspaceMode.EXPLORE,
                         currentArchiveUri = uri,
                         currentArchiveName = displayName,
+                        currentArchiveSizeBytes = archiveSizeBytes,
                         unlockedPassword = password,
                         archiveEntries = entries,
                         selectedEntryPaths = emptySet(),
@@ -295,7 +364,21 @@ class ArchiveViewModel(
     }
 
     fun setCompressionDialogVisible(visible: Boolean) {
-        _uiState.update { it.copy(showCompressionDialog = visible) }
+        _uiState.update { state ->
+            val itemsForNaming = if (state.selectedSourceIds.isNotEmpty()) {
+                state.sourceItems.filter { it.id in state.selectedSourceIds }
+            } else {
+                state.sourceItems
+            }
+            val updatedConfig = if (visible && itemsForNaming.isNotEmpty()) {
+                state.compressionConfig.copy(
+                    archiveBaseName = suggestArchiveBaseName(itemsForNaming, state.compressionConfig.archiveBaseName)
+                )
+            } else {
+                state.compressionConfig
+            }
+            state.copy(showCompressionDialog = visible, compressionConfig = updatedConfig)
+        }
     }
 
     fun updateCompressionConfig(config: CompressionConfig) {
@@ -304,7 +387,11 @@ class ArchiveViewModel(
         }
     }
 
-    fun startCompression(config: CompressionConfig) {
+    fun startCompression(
+        config: CompressionConfig,
+        destinationOverrideUri: Uri? = _uiState.value.destinationTreeUri,
+        destinationOverrideLabel: String? = _uiState.value.destinationLabel
+    ) {
         val stateSnapshot = _uiState.value
         val itemsToCompress = if (stateSnapshot.selectedSourceIds.isNotEmpty()) {
             stateSnapshot.sourceItems.filter { it.id in stateSnapshot.selectedSourceIds }
@@ -313,8 +400,15 @@ class ArchiveViewModel(
         }
         if (itemsToCompress.isEmpty()) return
 
-        updateCompressionConfig(config)
-        _uiState.update { it.copy(showCompressionDialog = false, bannerMessage = null) }
+        _uiState.update { state ->
+            state.copy(
+                compressionConfig = config,
+                destinationTreeUri = destinationOverrideUri,
+                destinationLabel = destinationOverrideLabel,
+                showCompressionDialog = false,
+                bannerMessage = null
+            ).also { persistSnapshot(it) }
+        }
 
         activeJob?.cancel()
         activeJob = viewModelScope.launch {
@@ -323,7 +417,7 @@ class ArchiveViewModel(
                 archiveRepository.compressItems(
                     items = itemsToCompress,
                     config = config,
-                    destinationTreeUri = _uiState.value.destinationTreeUri
+                    destinationTreeUri = destinationOverrideUri
                 ).collect { progress ->
                     finalProgress = progress
                     _uiState.update { it.copy(activeProgress = progress) }

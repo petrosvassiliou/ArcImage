@@ -14,3 +14,4 @@
 -dontwarn java.awt.**
 -dontwarn java.beans.**
 -dontwarn org.codehaus.mojo.animal_sniffer.**
+-dontwarn com.google.android.play.**

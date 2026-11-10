@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.AddPhotoAlternate
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DeleteSweep
@@ -73,6 +74,7 @@ import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -127,6 +129,7 @@ fun ImageStudioScreen(
     viewModel: ImageStudioViewModel,
     triggerOpenImagePicker: Boolean,
     onConsumedQuickLaunch: () -> Unit,
+    onRegisterSubBackHandler: (((() -> Boolean)?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -136,6 +139,18 @@ fun ImageStudioScreen(
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val isCompactWidth = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT
     var isDragHovering by rememberSaveable { mutableStateOf(false) }
+
+    DisposableEffect(navigator, onRegisterSubBackHandler) {
+        onRegisterSubBackHandler?.invoke {
+            if (navigator.canNavigateBack()) {
+                scope.launch { navigator.navigateBack() }
+                true
+            } else {
+                false
+            }
+        }
+        onDispose { onRegisterSubBackHandler?.invoke(null) }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
@@ -235,6 +250,8 @@ fun ImageStudioScreen(
                 AnimatedPane {
                     ImageSettingsDetailPane(
                         uiState = uiState,
+                        showBackButton = navigator.canNavigateBack(),
+                        onNavigateBack = { scope.launch { navigator.navigateBack() } },
                         onSelectResizeMode = { viewModel.setResizeMode(it) },
                         onChangeCustomPercent = { viewModel.setCustomPercentage(it) },
                         onChangeExactWidth = { viewModel.setExactWidth(it) },
@@ -640,6 +657,8 @@ private fun SettingsSection(
 @Composable
 private fun ImageSettingsDetailPane(
     uiState: ImageStudioUiState,
+    showBackButton: Boolean,
+    onNavigateBack: () -> Unit,
     onSelectResizeMode: (ResizeMode) -> Unit,
     onChangeCustomPercent: (Int) -> Unit,
     onChangeExactWidth: (Int) -> Unit,
@@ -665,6 +684,15 @@ private fun ImageSettingsDetailPane(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (showBackButton) {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back)
+                        )
+                    }
+                    Spacer(Modifier.width(4.dp))
+                }
                 Box(
                     modifier = Modifier
                         .size(40.dp)

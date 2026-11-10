@@ -211,17 +211,33 @@ object DocumentUriHelper {
         destinationTreeUri: Uri?
     ): Pair<Uri, String> {
         if (destinationTreeUri != null) {
-            val treeRoot = DocumentFile.fromTreeUri(context, destinationTreeUri)
-            if (treeRoot != null && treeRoot.canWrite()) {
-                treeRoot.findFile(desiredFileName)?.delete()
-                val created = treeRoot.createFile(mimeType, desiredFileName)
-                if (created != null) {
-                    context.contentResolver.openOutputStream(created.uri)?.use { out ->
-                        localSourceFile.inputStream().use { input ->
-                            input.copyTo(out)
-                        }
+            if (destinationTreeUri.scheme == "file") {
+                val targetDir = File(destinationTreeUri.path ?: "")
+                if ((targetDir.isDirectory || targetDir.mkdirs()) && targetDir.canWrite()) {
+                    val targetFile = uniqueFile(targetDir, desiredFileName)
+                    if (localSourceFile.absolutePath != targetFile.absolutePath) {
+                        localSourceFile.copyTo(targetFile, overwrite = true)
                     }
-                    return created.uri to (created.name ?: desiredFileName)
+                    val contentUri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        targetFile
+                    )
+                    return contentUri to targetFile.name
+                }
+            } else {
+                val treeRoot = DocumentFile.fromTreeUri(context, destinationTreeUri)
+                if (treeRoot != null && treeRoot.canWrite()) {
+                    treeRoot.findFile(desiredFileName)?.delete()
+                    val created = treeRoot.createFile(mimeType, desiredFileName)
+                    if (created != null) {
+                        context.contentResolver.openOutputStream(created.uri)?.use { out ->
+                            localSourceFile.inputStream().use { input ->
+                                input.copyTo(out)
+                            }
+                        }
+                        return created.uri to (created.name ?: desiredFileName)
+                    }
                 }
             }
         }
@@ -281,14 +297,27 @@ object DocumentUriHelper {
         destinationTreeUri: Uri?
     ): Triple<OutputStream, Uri, File?> {
         if (destinationTreeUri != null) {
-            val treeRoot = DocumentFile.fromTreeUri(context, destinationTreeUri)
-            if (treeRoot != null && treeRoot.canWrite()) {
-                treeRoot.findFile(fileName)?.delete()
-                val docFile = treeRoot.createFile(mimeType, fileName)
-                if (docFile != null) {
-                    val out = context.contentResolver.openOutputStream(docFile.uri)
-                    if (out != null) {
-                        return Triple(out, docFile.uri, null)
+            if (destinationTreeUri.scheme == "file") {
+                val targetDir = File(destinationTreeUri.path ?: "")
+                if ((targetDir.isDirectory || targetDir.mkdirs()) && targetDir.canWrite()) {
+                    val outFile = uniqueFile(targetDir, fileName)
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        outFile
+                    )
+                    return Triple(FileOutputStream(outFile), uri, outFile)
+                }
+            } else {
+                val treeRoot = DocumentFile.fromTreeUri(context, destinationTreeUri)
+                if (treeRoot != null && treeRoot.canWrite()) {
+                    treeRoot.findFile(fileName)?.delete()
+                    val docFile = treeRoot.createFile(mimeType, fileName)
+                    if (docFile != null) {
+                        val out = context.contentResolver.openOutputStream(docFile.uri)
+                        if (out != null) {
+                            return Triple(out, docFile.uri, null)
+                        }
                     }
                 }
             }

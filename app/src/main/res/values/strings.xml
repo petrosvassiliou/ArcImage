@@ -161,4 +161,30 @@
     <string name="action_open_folder">Open</string>
     <string name="action_select">Select</string>
     <string name="files_drop_hint">Drop files here to open them</string>
+
+    <!-- Navigation, Archive Info & Play-Protect-Safe Updates -->
+    <string name="action_back">Back</string>
+    <string name="archive_destination_label">Destination Folder</string>
+    <string name="archive_browse_folder">Choose Folder…</string>
+    <string name="archive_select_this_folder">Use This Folder</string>
+    <string name="archive_system_folder_picker">System Picker…</string>
+    <string name="archive_info_title">Archive Info</string>
+    <string name="archive_file_size_label">Archive Size</string>
+    <string name="archive_total_unpacked_label">Unpacked Total</string>
+    <string name="archive_contents_header">Archive Contents</string>
+    <string name="archive_selected_entry_title">Selected Entry</string>
+    <string name="action_updates">Updates</string>
+    <string name="update_dialog_title">App Updates</string>
+    <string name="update_current_version">Installed version: v%1$s</string>
+    <string name="update_auto_check_label">Automatic update check</string>
+    <string name="update_auto_check_desc">Check for updates automatically on startup</string>
+    <string name="update_check_now">Check for updates</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_up_to_date">ArcImage is up to date (v%1$s)</string>
+    <string name="update_available_title">Update available: v%1$s</string>
+    <string name="update_available_play">An update is available on Google Play</string>
+    <string name="update_install_now">Update now</string>
+    <string name="update_ready_restart">Update downloaded — Restart to apply</string>
+    <string name="update_check_failed">Unable to check for updates right now</string>
+    <string name="update_play_protect_note">Updates are delivered via Google Play or your system browser with full Google Play Protect verification.</string>
 </resources>

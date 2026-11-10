@@ -160,4 +160,30 @@
     <string name="action_open_folder">Öffnen</string>
     <string name="action_select">Auswählen</string>
     <string name="files_drop_hint">Dateien hier ablegen, um sie zu öffnen</string>
+
+    <!-- Navigation, Archive Info & Play-Protect-Safe Updates -->
+    <string name="action_back">Zurück</string>
+    <string name="archive_destination_label">Zielordner</string>
+    <string name="archive_browse_folder">Ordner wählen…</string>
+    <string name="archive_select_this_folder">Diesen Ordner nutzen</string>
+    <string name="archive_system_folder_picker">Systemauswahl…</string>
+    <string name="archive_info_title">Archiv-Info</string>
+    <string name="archive_file_size_label">Archivgröße</string>
+    <string name="archive_total_unpacked_label">Entpackt gesamt</string>
+    <string name="archive_contents_header">Archivinhalt</string>
+    <string name="archive_selected_entry_title">Ausgewählter Eintrag</string>
+    <string name="action_updates">Updates</string>
+    <string name="update_dialog_title">App-Updates</string>
+    <string name="update_current_version">Installierte Version: v%1$s</string>
+    <string name="update_auto_check_label">Automatische Update-Prüfung</string>
+    <string name="update_auto_check_desc">Beim Start automatisch nach Updates suchen</string>
+    <string name="update_check_now">Nach Updates suchen</string>
+    <string name="update_checking">Suche nach Updates…</string>
+    <string name="update_up_to_date">ArcImage ist aktuell (v%1$s)</string>
+    <string name="update_available_title">Update verfügbar: v%1$s</string>
+    <string name="update_available_play">Ein Update ist bei Google Play verfügbar</string>
+    <string name="update_install_now">Jetzt aktualisieren</string>
+    <string name="update_ready_restart">Update geladen — Zum Anwenden neu starten</string>
+    <string name="update_check_failed">Update-Prüfung derzeit nicht möglich</string>
+    <string name="update_play_protect_note">Updates erfolgen über Google Play oder den Systembrowser mit vollständiger Google Play Protect-Prüfung.</string>
 </resources>

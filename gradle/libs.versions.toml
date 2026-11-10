@@ -8,6 +8,7 @@ lifecycle = "2.9.0"
 composeBom = "2026.05.00"
 adaptive = "1.1.0"
 glance = "1.1.1"
+playAppUpdate = "2.1.0"
 documentfile = "1.1.0"
 exifinterface = "1.4.1"
 heifwriter = "1.1.0"
@@ -49,6 +50,9 @@ androidx-compose-adaptive-navigation = { group = "androidx.compose.material3.ada
 
 androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 androidx-glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
+
+play-app-update = { group = "com.google.android.play", name = "app-update", version.ref = "playAppUpdate" }
+play-app-update-ktx = { group = "com.google.android.play", name = "app-update-ktx", version.ref = "playAppUpdate" }
 
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }

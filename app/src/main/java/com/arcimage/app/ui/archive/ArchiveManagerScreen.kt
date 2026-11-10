@@ -3,7 +3,6 @@ package com.arcimage.app.ui.archive
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,20 +23,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.NoteAdd
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material.icons.rounded.Archive
@@ -52,8 +42,6 @@ import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -62,23 +50,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.layout.AnimatedPane
-import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
-import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
-import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -97,15 +76,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.window.core.layout.WindowWidthSizeClass
 import com.arcimage.app.R
 import com.arcimage.app.data.files.DeviceFileRepository
 import com.arcimage.app.data.util.DocumentUriHelper
 import com.arcimage.app.model.ArchiveEntryItem
+import com.arcimage.app.model.ArchiveFormat
 import com.arcimage.app.model.ArchiveOperationType
 import com.arcimage.app.model.ArchiveWorkspaceMode
 import com.arcimage.app.model.FileSizeFormatter
 import com.arcimage.app.model.SourceItem
-import com.arcimage.app.ui.components.BrandHeaderCard
 import com.arcimage.app.ui.components.DeterminateProgressDialog
 import com.arcimage.app.ui.components.DropZoneOverlay
 import com.arcimage.app.ui.components.FileKindTile
@@ -115,6 +95,7 @@ import com.arcimage.app.ui.components.PillSearchField
 import com.arcimage.app.ui.components.PillTabs
 import com.arcimage.app.ui.components.RoundedListContainer
 import com.arcimage.app.ui.components.StatusBannerCard
+import com.arcimage.app.ui.theme.ArcBrandGradient
 import com.arcimage.app.ui.util.arcFileDropTarget
 import com.arcimage.app.ui.util.arcHoverable
 import com.arcimage.app.ui.util.arcKeyboardShortcuts
@@ -122,7 +103,6 @@ import com.arcimage.app.ui.util.arcPointerContextActions
 import com.arcimage.app.ui.util.rememberArcHoverState
 import com.arcimage.app.ui.viewmodel.ArchiveUiState
 import com.arcimage.app.ui.viewmodel.ArchiveViewModel
-import kotlinx.coroutines.launch
 
 @Composable
 fun ArchiveManagerScreen(
@@ -133,8 +113,9 @@ fun ArchiveManagerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val navigator = rememberListDetailPaneScaffoldNavigator<String>()
+    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val isCompactWidth =
+        adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT
     val focusRequester = remember { FocusRequester() }
     var isDragHovering by rememberSaveable { mutableStateOf(false) }
 
@@ -226,70 +207,107 @@ fun ArchiveManagerScreen(
                 onUrisDropped = { uris -> viewModel.handleDroppedOrSharedArchiveUris(uris) }
             )
     ) {
-        NavigableListDetailPaneScaffold(
-            navigator = navigator,
-            listPane = {
-                AnimatedPane {
-                    ArchiveMasterPane(
-                        uiState = uiState,
-                        onSelectMode = { viewModel.setMode(it) },
-                        onAddFiles = { addFilesLauncher.launch(arrayOf("*/*")) },
-                        onAddFolder = { addFolderLauncher.launch(null) },
-                        onOpenArchive = { openArchiveLauncher.launch(arrayOf("*/*")) },
-                        onChooseDestination = { destinationTreeLauncher.launch(null) },
-                        onSearchQueryChange = { viewModel.setSearchQuery(it) },
-                        onSelectAll = { viewModel.selectAllInCurrentMode() },
-                        onClearSelection = { viewModel.clearSelectionAndModals() },
-                        onDeleteSelected = { viewModel.deleteSelectedItems() },
-                        onToggleSource = { viewModel.toggleSourceSelection(it) },
-                        onInspectSource = { id ->
-                            viewModel.focusSourceItem(id)
-                            scope.launch {
-                                navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, id)
-                            }
-                        },
-                        onRemoveSource = { viewModel.removeSourceItem(it) },
-                        onToggleEntry = { viewModel.toggleEntrySelection(it) },
-                        onInspectEntry = { path ->
-                            viewModel.focusArchiveEntry(path)
-                            scope.launch {
-                                navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, path)
-                            }
-                        },
-                        onExtractSingleEntry = { path ->
+        if (isCompactWidth) {
+            // Compact single-column layout: contents fill the main screen area
+            ArchiveCompactLayout(
+                uiState = uiState,
+                onSelectMode = { viewModel.setMode(it) },
+                onAddFiles = { addFilesLauncher.launch(arrayOf("*/*")) },
+                onAddFolder = { addFolderLauncher.launch(null) },
+                onOpenArchive = { openArchiveLauncher.launch(arrayOf("*/*")) },
+                onChooseDestination = { destinationTreeLauncher.launch(null) },
+                onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                onSelectAll = { viewModel.selectAllInCurrentMode() },
+                onClearSelection = { viewModel.clearSelectionAndModals() },
+                onDeleteSelected = { viewModel.deleteSelectedItems() },
+                onToggleSource = { viewModel.toggleSourceSelection(it) },
+                onInspectSource = { viewModel.focusSourceItem(it) },
+                onRemoveSource = { viewModel.removeSourceItem(it) },
+                onToggleEntry = { viewModel.toggleEntrySelection(it) },
+                onInspectEntry = { viewModel.focusArchiveEntry(it) },
+                onExtractSingleEntry = { path ->
+                    if (path !in uiState.selectedEntryPaths) {
+                        viewModel.toggleEntrySelection(path)
+                    }
+                    viewModel.startExtraction(extractOnlySelected = true)
+                },
+                onOpenCompressDialog = { viewModel.setCompressionDialogVisible(true) },
+                onExtractAll = { viewModel.startExtraction(extractOnlySelected = false) },
+                onExtractSelected = { viewModel.startExtraction(extractOnlySelected = true) },
+                onDismissBanner = { viewModel.dismissBanner() }
+            )
+        } else {
+            // Medium / Expanded layout (Googlebook OS, Desktops, Tablets):
+            // - Left column: mode & actions at top-left, Compressed File Info on the BOTTOM-LEFT
+            // - Main screen (right, full height): Contents of the compressed file (or queued items)
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                ArchiveLeftSidebar(
+                    uiState = uiState,
+                    onSelectMode = { viewModel.setMode(it) },
+                    onAddFiles = { addFilesLauncher.launch(arrayOf("*/*")) },
+                    onAddFolder = { addFolderLauncher.launch(null) },
+                    onOpenArchive = { openArchiveLauncher.launch(arrayOf("*/*")) },
+                    onChooseDestination = { destinationTreeLauncher.launch(null) },
+                    onExtractFocused = { path ->
+                        if (path !in uiState.selectedEntryPaths) {
                             viewModel.toggleEntrySelection(path)
-                            viewModel.startExtraction(extractOnlySelected = true)
-                        },
-                        onOpenCompressDialog = { viewModel.setCompressionDialogVisible(true) },
-                        onExtractAll = { viewModel.startExtraction(extractOnlySelected = false) },
-                        onExtractSelected = { viewModel.startExtraction(extractOnlySelected = true) },
-                        onDismissBanner = { viewModel.dismissBanner() }
-                    )
-                }
-            },
-            detailPane = {
-                AnimatedPane {
-                    ArchiveInspectorDetailPane(
-                        uiState = uiState,
-                        onExtractFocused = { path ->
-                            if (path !in uiState.selectedEntryPaths) {
-                                viewModel.toggleEntrySelection(path)
-                            }
-                            viewModel.startExtraction(extractOnlySelected = true)
                         }
-                    )
-                }
+                        viewModel.startExtraction(extractOnlySelected = true)
+                    },
+                    modifier = Modifier
+                        .width(320.dp)
+                        .fillMaxHeight()
+                )
+
+                ArchiveMainContentsArea(
+                    uiState = uiState,
+                    onAddFiles = { addFilesLauncher.launch(arrayOf("*/*")) },
+                    onAddFolder = { addFolderLauncher.launch(null) },
+                    onOpenArchive = { openArchiveLauncher.launch(arrayOf("*/*")) },
+                    onSearchQueryChange = { viewModel.setSearchQuery(it) },
+                    onSelectAll = { viewModel.selectAllInCurrentMode() },
+                    onClearSelection = { viewModel.clearSelectionAndModals() },
+                    onDeleteSelected = { viewModel.deleteSelectedItems() },
+                    onToggleSource = { viewModel.toggleSourceSelection(it) },
+                    onInspectSource = { viewModel.focusSourceItem(it) },
+                    onRemoveSource = { viewModel.removeSourceItem(it) },
+                    onToggleEntry = { viewModel.toggleEntrySelection(it) },
+                    onInspectEntry = { viewModel.focusArchiveEntry(it) },
+                    onExtractSingleEntry = { path ->
+                        if (path !in uiState.selectedEntryPaths) {
+                            viewModel.toggleEntrySelection(path)
+                        }
+                        viewModel.startExtraction(extractOnlySelected = true)
+                    },
+                    onOpenCompressDialog = { viewModel.setCompressionDialogVisible(true) },
+                    onExtractAll = { viewModel.startExtraction(extractOnlySelected = false) },
+                    onExtractSelected = { viewModel.startExtraction(extractOnlySelected = true) },
+                    onDismissBanner = { viewModel.dismissBanner() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
             }
-        )
+        }
 
         DropZoneOverlay(visible = isDragHovering)
     }
 
-    // Modals & Non-blocking Determinate Progress
+    // Compression Dialog: asks for Destination Folder, Archive Name, and Archive Type
     if (uiState.showCompressionDialog) {
         CompressionSettingsDialog(
             initialConfig = uiState.compressionConfig,
-            onConfirm = { config -> viewModel.startCompression(config) },
+            currentDestinationUri = uiState.destinationTreeUri,
+            currentDestinationLabel = uiState.destinationLabel,
+            onRequestSystemFolderPicker = { destinationTreeLauncher.launch(null) },
+            onConfirm = { config, destUri, destLabel ->
+                viewModel.startCompression(config, destUri, destLabel)
+            },
             onDismiss = { viewModel.setCompressionDialogVisible(false) }
         )
     }
@@ -317,39 +335,28 @@ fun ArchiveManagerScreen(
     }
 }
 
+// =============================================================================
+// Left Sidebar (Expanded / Googlebook OS): Controls at top-left, Archive Info on BOTTOM-LEFT
+// =============================================================================
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ArchiveMasterPane(
+private fun ArchiveLeftSidebar(
     uiState: ArchiveUiState,
     onSelectMode: (ArchiveWorkspaceMode) -> Unit,
     onAddFiles: () -> Unit,
     onAddFolder: () -> Unit,
     onOpenArchive: () -> Unit,
     onChooseDestination: () -> Unit,
-    onSearchQueryChange: (String) -> Unit,
-    onSelectAll: () -> Unit,
-    onClearSelection: () -> Unit,
-    onDeleteSelected: () -> Unit,
-    onToggleSource: (String) -> Unit,
-    onInspectSource: (String) -> Unit,
-    onRemoveSource: (String) -> Unit,
-    onToggleEntry: (String) -> Unit,
-    onInspectEntry: (String) -> Unit,
-    onExtractSingleEntry: (String) -> Unit,
-    onOpenCompressDialog: () -> Unit,
-    onExtractAll: () -> Unit,
-    onExtractSelected: () -> Unit,
-    onDismissBanner: () -> Unit
+    onExtractFocused: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val isCompress = uiState.mode == ArchiveWorkspaceMode.COMPRESS
+
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .padding(top = 8.dp, bottom = 12.dp),
+        modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Mode Selector Header (pill tabs)
+        // Top-left: Mode switcher & quick actions
         PillTabs(
             options = listOf(
                 stringResource(R.string.archive_mode_compress) to Icons.Rounded.Archive,
@@ -358,28 +365,32 @@ private fun ArchiveMasterPane(
             selectedIndex = if (isCompress) 0 else 1,
             onSelect = { index ->
                 onSelectMode(if (index == 0) ArchiveWorkspaceMode.COMPRESS else ArchiveWorkspaceMode.EXPLORE)
-            }
+            },
+            modifier = Modifier.fillMaxWidth()
         )
 
-        // Action chips
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (isCompress) {
-                FilledTonalButton(onClick = onAddFiles) {
+                FilledTonalButton(onClick = onAddFiles, shape = CircleShape) {
                     Icon(Icons.Rounded.NoteAdd, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.archive_add_files))
                 }
-                FilledTonalButton(onClick = onAddFolder) {
+                FilledTonalButton(onClick = onAddFolder, shape = CircleShape) {
                     Icon(Icons.Rounded.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.archive_add_folder))
                 }
             } else {
-                FilledTonalButton(onClick = onOpenArchive) {
+                FilledTonalButton(
+                    onClick = onOpenArchive,
+                    shape = CircleShape,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Icon(Icons.Rounded.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.archive_open_archive))
@@ -401,57 +412,313 @@ private fun ArchiveMasterPane(
                     )
                 }
             )
+        }
 
-            val selectedCount = if (isCompress) uiState.selectedSourceIds.size else uiState.selectedEntryPaths.size
-            if (selectedCount > 0) {
-                AssistChip(
-                    onClick = onClearSelection,
-                    shape = CircleShape,
-                    leadingIcon = { Icon(Icons.Rounded.Close, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    label = { Text(stringResource(R.string.selected_count_format, selectedCount)) }
-                )
-                if (isCompress) {
-                    IconButton(onClick = onDeleteSelected) {
+        // Push the Compressed File Info panel cleanly to the BOTTOM-LEFT
+        Spacer(modifier = Modifier.weight(1f, fill = true))
+
+        CompressedFileInfoCard(
+            uiState = uiState,
+            onExtractFocused = onExtractFocused,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+/**
+ * Bottom-left Archive Info panel: shows the metadata of the opened compressed file
+ * (filename, format, packed size, unpacked total, space saved %, item count, encryption,
+ * and currently focused entry), or queued compression summary in Compress mode.
+ */
+@Composable
+private fun CompressedFileInfoCard(
+    uiState: ArchiveUiState,
+    onExtractFocused: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.archive_info_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            if (uiState.mode == ArchiveWorkspaceMode.EXPLORE && uiState.archiveEntries.isNotEmpty()) {
+                val unpackedTotal = uiState.archiveEntries.sumOf { it.uncompressedSize.coerceAtLeast(0L) }
+                val packedTotal = uiState.currentArchiveSizeBytes.takeIf { it > 0L }
+                    ?: uiState.archiveEntries.sumOf { it.compressedSize.coerceAtLeast(0L) }
+                val detectedFormat = ArchiveFormat.detectFromFileName(uiState.currentArchiveName)
+                val anyEncrypted = uiState.archiveEntries.any { it.isEncrypted }
+
+                // Brand gradient summary header for the compressed file
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .background(ArcBrandGradient)
+                        .padding(14.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Rounded.DeleteOutline,
-                            contentDescription = stringResource(R.string.action_remove_selected)
+                            imageVector = Icons.Rounded.FolderZip,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
                         )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = uiState.currentArchiveName,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = (detectedFormat?.displayName ?: "Archive") + " • " +
+                                    stringResource(R.string.files_items_count, uiState.archiveEntries.size),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.88f)
+                            )
+                        }
                     }
                 }
-            } else if ((isCompress && uiState.sourceItems.isNotEmpty()) ||
-                (!isCompress && uiState.archiveEntries.isNotEmpty())
-            ) {
-                IconButton(onClick = onSelectAll) {
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    CompactStatTile(
+                        label = stringResource(R.string.archive_file_size_label),
+                        value = FileSizeFormatter.formatBytes(packedTotal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    CompactStatTile(
+                        label = stringResource(R.string.archive_total_unpacked_label),
+                        value = FileSizeFormatter.formatBytes(unpackedTotal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                InspectorRow(
+                    label = stringResource(R.string.archive_encrypted_status),
+                    value = if (anyEncrypted) {
+                        stringResource(R.string.archive_encrypted_yes)
+                    } else {
+                        stringResource(R.string.archive_encrypted_no)
+                    }
+                )
+
+                // Selected / Focused entry quick details
+                uiState.focusedArchiveEntry?.let { entry ->
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                    Text(
+                        text = stringResource(R.string.archive_selected_entry_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = entry.path,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (!entry.isDirectory) {
+                        FilledTonalButton(
+                            onClick = { onExtractFocused(entry.path) },
+                            shape = CircleShape,
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Rounded.Unarchive, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.widget_action_extract))
+                        }
+                    }
+                }
+            } else if (uiState.mode == ArchiveWorkspaceMode.COMPRESS && uiState.sourceItems.isNotEmpty()) {
+                val totalSourceBytes = uiState.sourceItems.sumOf { it.sizeBytes }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    CompactStatTile(
+                        label = stringResource(R.string.archive_uncompressed_size),
+                        value = FileSizeFormatter.formatBytes(totalSourceBytes),
+                        modifier = Modifier.weight(1f)
+                    )
+                    CompactStatTile(
+                        label = stringResource(R.string.archive_format_label),
+                        value = ".${uiState.compressionConfig.format.extension}",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                InspectorRow(
+                    label = stringResource(R.string.archive_destination_label),
+                    value = uiState.destinationLabel
+                        ?: stringResource(R.string.archive_default_destination)
+                )
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(vertical = 6.dp)
+                ) {
                     Icon(
-                        imageVector = Icons.Rounded.SelectAll,
-                        contentDescription = stringResource(R.string.action_select_all)
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.archive_inspector_empty),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
+    }
+}
 
+@Composable
+private fun CompactStatTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+// =============================================================================
+// Main Screen Area: Archive Contents (or Queued Source Files) fill the main screen
+// =============================================================================
+@Composable
+private fun ArchiveMainContentsArea(
+    uiState: ArchiveUiState,
+    onAddFiles: () -> Unit,
+    onAddFolder: () -> Unit,
+    onOpenArchive: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onSelectAll: () -> Unit,
+    onClearSelection: () -> Unit,
+    onDeleteSelected: () -> Unit,
+    onToggleSource: (String) -> Unit,
+    onInspectSource: (String) -> Unit,
+    onRemoveSource: (String) -> Unit,
+    onToggleEntry: (String) -> Unit,
+    onInspectEntry: (String) -> Unit,
+    onExtractSingleEntry: (String) -> Unit,
+    onOpenCompressDialog: () -> Unit,
+    onExtractAll: () -> Unit,
+    onExtractSelected: () -> Unit,
+    onDismissBanner: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isCompress = uiState.mode == ArchiveWorkspaceMode.COMPRESS
+    val selectedCount = if (isCompress) uiState.selectedSourceIds.size else uiState.selectedEntryPaths.size
+    val hasItems = if (isCompress) uiState.sourceItems.isNotEmpty() else uiState.archiveEntries.isNotEmpty()
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         StatusBannerCard(
             banner = uiState.bannerMessage,
             onDismiss = onDismissBanner
         )
 
-        if (!isCompress && uiState.archiveEntries.isNotEmpty()) {
-            BrandHeaderCard(
-                icon = Icons.Rounded.FolderZip,
-                title = uiState.currentArchiveName,
-                subtitle = stringResource(R.string.files_items_count, uiState.archiveEntries.size) + " • " +
-                    FileSizeFormatter.formatBytes(uiState.archiveEntries.sumOf { it.uncompressedSize })
-            )
-            PillSearchField(
-                query = uiState.searchQuery,
-                onQueryChange = onSearchQueryChange,
-                placeholder = stringResource(R.string.archive_search_placeholder),
-                clearDescription = stringResource(R.string.action_clear_selection)
-            )
+        if (hasItems) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (!isCompress) {
+                    PillSearchField(
+                        query = uiState.searchQuery,
+                        onQueryChange = onSearchQueryChange,
+                        placeholder = stringResource(R.string.archive_search_placeholder),
+                        clearDescription = stringResource(R.string.action_clear_selection),
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.files_items_count, uiState.sourceItems.size),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                if (selectedCount > 0) {
+                    AssistChip(
+                        onClick = onClearSelection,
+                        shape = CircleShape,
+                        leadingIcon = {
+                            Icon(Icons.Rounded.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                        },
+                        label = { Text(stringResource(R.string.selected_count_format, selectedCount)) }
+                    )
+                    if (isCompress) {
+                        IconButton(onClick = onDeleteSelected) {
+                            Icon(
+                                imageVector = Icons.Rounded.DeleteOutline,
+                                contentDescription = stringResource(R.string.action_remove_selected)
+                            )
+                        }
+                    }
+                } else {
+                    IconButton(onClick = onSelectAll) {
+                        Icon(
+                            imageVector = Icons.Rounded.SelectAll,
+                            contentDescription = stringResource(R.string.action_select_all)
+                        )
+                    }
+                }
+            }
         }
 
-        // Main List Content
-        Box(modifier = Modifier.weight(1f)) {
+        // Full-screen main contents container
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (isCompress) {
                 if (uiState.sourceItems.isEmpty()) {
                     ModernEmptyState(
@@ -466,7 +733,7 @@ private fun ArchiveMasterPane(
                 } else {
                     RoundedListContainer(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
-                            contentPadding = PaddingValues(8.dp),
+                            contentPadding = PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 84.dp),
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
@@ -496,7 +763,7 @@ private fun ArchiveMasterPane(
                 } else {
                     RoundedListContainer(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
-                            contentPadding = PaddingValues(8.dp),
+                            contentPadding = PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 84.dp),
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
@@ -515,47 +782,207 @@ private fun ArchiveMasterPane(
                     }
                 }
             }
-        }
 
-        // Floating workspace action pill
-        if (isCompress && uiState.sourceItems.isNotEmpty()) {
-            FloatingActionPill {
-                val totalSize = uiState.sourceItems.sumOf { it.sizeBytes }
-                Text(
-                    text = "${uiState.sourceItems.size} • ${FileSizeFormatter.formatBytes(totalSize)}",
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f)
-                )
-                Button(onClick = onOpenCompressDialog) {
-                    Icon(Icons.Rounded.Archive, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.archive_compress_now))
-                }
-            }
-        } else if (!isCompress && uiState.archiveEntries.isNotEmpty()) {
-            FloatingActionPill {
-                Text(
-                    text = uiState.currentArchiveName,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                if (uiState.selectedEntryPaths.isNotEmpty()) {
-                    FilledTonalButton(onClick = onExtractSelected) {
-                        Text(
-                            stringResource(
-                                R.string.archive_extract_selected,
-                                uiState.selectedEntryPaths.size
-                            ),
-                            maxLines = 1
-                        )
+            // Floating action pill anchored inside the main workspace
+            if (isCompress && uiState.sourceItems.isNotEmpty()) {
+                FloatingActionPill(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(14.dp)
+                ) {
+                    val totalSize = uiState.sourceItems.sumOf { it.sizeBytes }
+                    Text(
+                        text = "${uiState.sourceItems.size} • ${FileSizeFormatter.formatBytes(totalSize)}",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(onClick = onOpenCompressDialog, shape = CircleShape) {
+                        Icon(Icons.Rounded.Archive, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.archive_compress_now))
                     }
                 }
-                Button(onClick = onExtractAll) {
-                    Icon(Icons.Rounded.Unarchive, contentDescription = null, modifier = Modifier.size(18.dp))
+            } else if (!isCompress && uiState.archiveEntries.isNotEmpty()) {
+                FloatingActionPill(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.files_items_count, uiState.filteredArchiveEntries.size),
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (uiState.selectedEntryPaths.isNotEmpty()) {
+                        FilledTonalButton(onClick = onExtractSelected, shape = CircleShape) {
+                            Text(
+                                stringResource(
+                                    R.string.archive_extract_selected,
+                                    uiState.selectedEntryPaths.size
+                                ),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                    Button(onClick = onExtractAll, shape = CircleShape) {
+                        Icon(Icons.Rounded.Unarchive, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.archive_extract_all), maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// =============================================================================
+// Compact Portrait Layout (Phones): Contents occupy the main screen immediately
+// =============================================================================
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ArchiveCompactLayout(
+    uiState: ArchiveUiState,
+    onSelectMode: (ArchiveWorkspaceMode) -> Unit,
+    onAddFiles: () -> Unit,
+    onAddFolder: () -> Unit,
+    onOpenArchive: () -> Unit,
+    onChooseDestination: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onSelectAll: () -> Unit,
+    onClearSelection: () -> Unit,
+    onDeleteSelected: () -> Unit,
+    onToggleSource: (String) -> Unit,
+    onInspectSource: (String) -> Unit,
+    onRemoveSource: (String) -> Unit,
+    onToggleEntry: (String) -> Unit,
+    onInspectEntry: (String) -> Unit,
+    onExtractSingleEntry: (String) -> Unit,
+    onOpenCompressDialog: () -> Unit,
+    onExtractAll: () -> Unit,
+    onExtractSelected: () -> Unit,
+    onDismissBanner: () -> Unit
+) {
+    val isCompress = uiState.mode == ArchiveWorkspaceMode.COMPRESS
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+            .padding(top = 6.dp, bottom = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        PillTabs(
+            options = listOf(
+                stringResource(R.string.archive_mode_compress) to Icons.Rounded.Archive,
+                stringResource(R.string.archive_mode_explore) to Icons.Rounded.FolderZip
+            ),
+            selectedIndex = if (isCompress) 0 else 1,
+            onSelect = { index ->
+                onSelectMode(if (index == 0) ArchiveWorkspaceMode.COMPRESS else ArchiveWorkspaceMode.EXPLORE)
+            }
+        )
+
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (isCompress) {
+                FilledTonalButton(onClick = onAddFiles, shape = CircleShape) {
+                    Icon(Icons.Rounded.NoteAdd, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.archive_extract_all), maxLines = 1)
+                    Text(stringResource(R.string.archive_add_files))
+                }
+                FilledTonalButton(onClick = onAddFolder, shape = CircleShape) {
+                    Icon(Icons.Rounded.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.archive_add_folder))
+                }
+            } else {
+                FilledTonalButton(onClick = onOpenArchive, shape = CircleShape) {
+                    Icon(Icons.Rounded.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.archive_open_archive))
+                }
+            }
+
+            AssistChip(
+                onClick = onChooseDestination,
+                shape = CircleShape,
+                leadingIcon = {
+                    Icon(Icons.Rounded.Folder, contentDescription = null, modifier = Modifier.size(18.dp))
+                },
+                label = {
+                    Text(
+                        text = uiState.destinationLabel
+                            ?: stringResource(R.string.archive_default_destination),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            )
+        }
+
+        // Main contents area dominates the screen
+        ArchiveMainContentsArea(
+            uiState = uiState,
+            onAddFiles = onAddFiles,
+            onAddFolder = onAddFolder,
+            onOpenArchive = onOpenArchive,
+            onSearchQueryChange = onSearchQueryChange,
+            onSelectAll = onSelectAll,
+            onClearSelection = onClearSelection,
+            onDeleteSelected = onDeleteSelected,
+            onToggleSource = onToggleSource,
+            onInspectSource = onInspectSource,
+            onRemoveSource = onRemoveSource,
+            onToggleEntry = onToggleEntry,
+            onInspectEntry = onInspectEntry,
+            onExtractSingleEntry = onExtractSingleEntry,
+            onOpenCompressDialog = onOpenCompressDialog,
+            onExtractAll = onExtractAll,
+            onExtractSelected = onExtractSelected,
+            onDismissBanner = onDismissBanner,
+            modifier = Modifier.weight(1f)
+        )
+
+        // Compact bottom info strip when exploring an archive
+        if (!isCompress && uiState.archiveEntries.isNotEmpty()) {
+            val unpacked = uiState.archiveEntries.sumOf { it.uncompressedSize.coerceAtLeast(0L) }
+            val packed = uiState.currentArchiveSizeBytes.takeIf { it > 0L }
+                ?: uiState.archiveEntries.sumOf { it.compressedSize.coerceAtLeast(0L) }
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.FolderZip,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = uiState.currentArchiveName,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "${FileSizeFormatter.formatBytes(packed)} → ${FileSizeFormatter.formatBytes(unpacked)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -627,7 +1054,6 @@ private fun SourceItemRow(
             }
         }
 
-        // Googlebook OS Right-Click / Long-Press Context Menu
         menuOffset?.let { pos ->
             DropdownMenu(
                 expanded = true,
@@ -777,150 +1203,6 @@ private fun ArchiveEntryRow(
 }
 
 @Composable
-private fun ArchiveInspectorDetailPane(
-    uiState: ArchiveUiState,
-    onExtractFocused: (String) -> Unit
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(12.dp),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.archive_inspector_title),
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            if (uiState.mode == ArchiveWorkspaceMode.EXPLORE && uiState.focusedArchiveEntry != null) {
-                val entry = uiState.focusedArchiveEntry!!
-                InspectorHeader(
-                    kind = DeviceFileRepository.classify(entry.name.ifBlank { entry.path }, entry.isDirectory),
-                    title = entry.name.ifBlank { entry.path }
-                )
-                InspectorRow(stringResource(R.string.archive_entry_path), entry.path)
-                InspectorRow(
-                    stringResource(R.string.archive_entry_type),
-                    if (entry.isDirectory) {
-                        stringResource(R.string.archive_type_folder)
-                    } else {
-                        stringResource(R.string.archive_type_file)
-                    }
-                )
-                if (!entry.isDirectory) {
-                    InspectorRow(
-                        stringResource(R.string.archive_uncompressed_size),
-                        FileSizeFormatter.formatBytes(entry.uncompressedSize)
-                    )
-                    if (entry.compressedSize > 0L) {
-                        InspectorRow(
-                            stringResource(R.string.archive_compressed_size),
-                            FileSizeFormatter.formatBytes(entry.compressedSize)
-                        )
-                        InspectorRow(
-                            stringResource(R.string.archive_compression_ratio),
-                            "${entry.savedRatioPercent}%"
-                        )
-                    }
-                }
-                InspectorRow(
-                    stringResource(R.string.archive_encrypted_status),
-                    if (entry.isEncrypted) {
-                        stringResource(R.string.archive_encrypted_yes)
-                    } else {
-                        stringResource(R.string.archive_encrypted_no)
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-                Button(
-                    onClick = { onExtractFocused(entry.path) },
-                    contentPadding = PaddingValues(vertical = 14.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Rounded.Unarchive, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.widget_action_extract))
-                }
-            } else if (uiState.mode == ArchiveWorkspaceMode.COMPRESS && uiState.focusedSourceItem != null) {
-                val src = uiState.focusedSourceItem!!
-                InspectorHeader(
-                    kind = DeviceFileRepository.classify(src.name, src.isDirectory),
-                    title = src.name
-                )
-                InspectorRow(stringResource(R.string.archive_entry_path), src.name)
-                InspectorRow(
-                    stringResource(R.string.archive_entry_type),
-                    if (src.isDirectory) {
-                        "${stringResource(R.string.archive_type_folder)} (${src.childFileCount})"
-                    } else {
-                        stringResource(R.string.archive_type_file)
-                    }
-                )
-                InspectorRow(
-                    stringResource(R.string.archive_uncompressed_size),
-                    FileSizeFormatter.formatBytes(src.sizeBytes)
-                )
-                InspectorRow(
-                    stringResource(R.string.archive_format_label),
-                    uiState.compressionConfig.format.displayName
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.archive_inspector_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun InspectorHeader(kind: com.arcimage.app.data.files.FileKind, title: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        modifier = Modifier.padding(vertical = 6.dp)
-    ) {
-        FileKindTile(kind = kind, size = 56.dp)
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
 private fun InspectorRow(label: String, value: String) {
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -928,17 +1210,19 @@ private fun InspectorRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

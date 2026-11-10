@@ -1,7 +1,11 @@
 package com.arcimage.app.ui.components
 
+import android.app.Activity
 import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,17 +26,20 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Keyboard
-import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PhotoSizeSelectLarge
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderZip
 import androidx.compose.material.icons.rounded.PhotoSizeSelectLarge
+import androidx.compose.material.icons.rounded.SystemUpdateAlt
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -47,14 +54,18 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -84,11 +95,39 @@ fun ArcImageShell(
     fileBrowserViewModel: FileBrowserViewModel
 ) {
     val shellState by shellViewModel.uiState.collectAsStateWithLifecycle()
+    val fileBrowserState by fileBrowserViewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val isCompactScreen =
         adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT
 
     var showThemeMenu by rememberSaveable { mutableStateOf(false) }
+    var subScreenBackHandler by remember { mutableStateOf<(() -> Boolean)?>(null) }
+
+    val onBackClick: () -> Unit = {
+        if (subScreenBackHandler?.invoke() == true) {
+            // Handled by inner detail pane (e.g., Image Studio single-pane inspector)
+        } else if (shellState.activeDestination == AppDestination.FILES) {
+            when {
+                fileBrowserState.selectedPaths.isNotEmpty() -> fileBrowserViewModel.clearSelection()
+                fileBrowserState.canNavigateUp -> fileBrowserViewModel.navigateUp()
+                !shellViewModel.navigateBackDestination() -> {
+                    (context as? Activity)?.moveTaskToBack(true)
+                }
+            }
+        } else {
+            if (!shellViewModel.navigateBackDestination()) {
+                (context as? Activity)?.moveTaskToBack(true)
+            }
+        }
+    }
+
+    BackHandler(
+        enabled = shellState.activeDestination != AppDestination.FILES ||
+            shellState.destinationBackStack.isNotEmpty()
+    ) {
+        onBackClick()
+    }
 
     val themeButton: @Composable () -> Unit = {
         Box {
@@ -104,6 +143,7 @@ fun ArcImageShell(
                 useDynamicColor = shellState.useDynamicColor,
                 onSelectTheme = { shellViewModel.setThemePreference(it) },
                 onToggleDynamicColor = { shellViewModel.setUseDynamicColor(it) },
+                onOpenUpdates = { shellViewModel.setUpdateDialogVisible(true) },
                 onDismiss = { showThemeMenu = false }
             )
         }
@@ -111,7 +151,7 @@ fun ArcImageShell(
 
     if (isCompactScreen) {
         // =====================================================================
-        // COMPACT SCREENS (Android Phones): brand top bar + Bottom NavigationBar
+        // COMPACT SCREENS (Android Phones): Back button + brand top bar + Bottom NavigationBar
         // =====================================================================
         Scaffold(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -120,29 +160,35 @@ fun ArcImageShell(
                     modifier = Modifier
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                        .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 6.dp),
+                        .padding(start = 10.dp, end = 6.dp, top = 10.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ArcImageLogo(size = 38.dp)
+                    ShellBackButton(onClick = onBackClick)
+                    ArcImageLogo(size = 34.dp)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = stringResource(shellState.activeDestination.labelRes),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    LanguagePill(
+                    LanguageFlagButton(
                         language = shellState.currentLanguage,
-                        showFullName = false,
                         onClick = { shellViewModel.setLanguageDialogVisible(true) }
+                    )
+                    UpdateStatusButton(
+                        hasUpdate = shellState.updateCheckResult?.hasUpdate == true,
+                        onClick = { shellViewModel.setUpdateDialogVisible(true) }
                     )
                     themeButton()
                 }
@@ -180,6 +226,7 @@ fun ArcImageShell(
                 quickLaunchAction = shellState.quickLaunchRequest,
                 onConsumedQuickLaunch = { shellViewModel.consumeQuickLaunch() },
                 onNavigate = { shellViewModel.selectDestination(it) },
+                onRegisterSubBackHandler = { subScreenBackHandler = it },
                 archiveViewModel = archiveViewModel,
                 imageStudioViewModel = imageStudioViewModel,
                 fileBrowserViewModel = fileBrowserViewModel,
@@ -246,6 +293,10 @@ fun ArcImageShell(
                     }
 
                     Spacer(modifier = Modifier.weight(1f))
+                    UpdateStatusButton(
+                        hasUpdate = shellState.updateCheckResult?.hasUpdate == true,
+                        onClick = { shellViewModel.setUpdateDialogVisible(true) }
+                    )
                     themeButton()
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -260,14 +311,16 @@ fun ArcImageShell(
                         .padding(top = 10.dp, end = 10.dp, bottom = 10.dp)
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // Desktop workspace header: title, localized subtitle, shortcut hint & language pill
+                        // Desktop workspace header: Back button, title, subtitle, shortcut hint & Country Flag button
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(start = 24.dp, end = 16.dp, top = 18.dp, bottom = 8.dp),
+                                .padding(start = 18.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            ShellBackButton(onClick = onBackClick)
+
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(shellState.activeDestination.labelRes),
@@ -306,9 +359,8 @@ fun ArcImageShell(
                                 }
                             }
 
-                            LanguagePill(
+                            LanguageFlagButton(
                                 language = shellState.currentLanguage,
-                                showFullName = true,
                                 onClick = { shellViewModel.setLanguageDialogVisible(true) }
                             )
                         }
@@ -318,6 +370,7 @@ fun ArcImageShell(
                             quickLaunchAction = shellState.quickLaunchRequest,
                             onConsumedQuickLaunch = { shellViewModel.consumeQuickLaunch() },
                             onNavigate = { shellViewModel.selectDestination(it) },
+                            onRegisterSubBackHandler = { subScreenBackHandler = it },
                             archiveViewModel = archiveViewModel,
                             imageStudioViewModel = imageStudioViewModel,
                             fileBrowserViewModel = fileBrowserViewModel,
@@ -336,6 +389,42 @@ fun ArcImageShell(
             onDismiss = { shellViewModel.setLanguageDialogVisible(false) }
         )
     }
+
+    if (shellState.showUpdateDialog) {
+        AppUpdateDialog(
+            currentVersion = shellState.currentVersionName,
+            autoCheckEnabled = shellState.autoCheckUpdates,
+            isChecking = shellState.isCheckingUpdate,
+            lastResult = shellState.updateCheckResult,
+            onToggleAutoCheck = { shellViewModel.setAutoCheckUpdates(it) },
+            onCheckNow = { shellViewModel.checkForUpdatesManually() },
+            onInstallUpdate = { result ->
+                (context as? Activity)?.let { activity ->
+                    shellViewModel.launchAvailableUpdate(activity, result)
+                }
+            },
+            onDismiss = { shellViewModel.setUpdateDialogVisible(false) }
+        )
+    }
+}
+
+/** Persistent Back button shown across every screen (Compact & Expanded). */
+@Composable
+private fun ShellBackButton(onClick: () -> Unit) {
+    FilledTonalIconButton(
+        onClick = onClick,
+        colors = IconButtonDefaults.filledTonalIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        modifier = Modifier.size(38.dp)
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+            contentDescription = stringResource(R.string.action_back),
+            modifier = Modifier.size(20.dp)
+        )
+    }
 }
 
 /** Full-colour ArcImage brand mark (arched frame + zipper + landscape; intentionally no letters). */
@@ -348,35 +437,61 @@ fun ArcImageLogo(size: Dp, modifier: Modifier = Modifier) {
     )
 }
 
+/** Country-flag-only language trigger (replaces text language badges). */
 @Composable
-private fun LanguagePill(
+private fun LanguageFlagButton(
     language: AppLanguage,
-    showFullName: Boolean,
     onClick: () -> Unit
 ) {
+    val actionLangDesc = stringResource(R.string.action_language)
     Surface(
         onClick = onClick,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            contentDescription = actionLangDesc
+        }
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        Box(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Language,
-                contentDescription = stringResource(R.string.action_language),
-                modifier = Modifier.size(18.dp)
+            CountryFlagIcon(
+                language = language,
+                width = 30.dp,
+                height = 20.dp,
+                cornerRadius = 4.dp
             )
-            Text(
-                text = if (showFullName && language.nativeDisplayName.isNotBlank()) {
-                    language.nativeDisplayName
+        }
+    }
+}
+
+@Composable
+private fun UpdateStatusButton(
+    hasUpdate: Boolean,
+    onClick: () -> Unit
+) {
+    Box {
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.Rounded.SystemUpdateAlt,
+                contentDescription = stringResource(R.string.action_updates),
+                tint = if (hasUpdate) {
+                    MaterialTheme.colorScheme.primary
                 } else {
-                    language.badgeCode
-                },
-                style = MaterialTheme.typography.labelLarge
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+        }
+        if (hasUpdate) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 8.dp)
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
             )
         }
     }
@@ -388,6 +503,7 @@ private fun ActiveFeatureWorkspace(
     quickLaunchAction: QuickLaunchAction?,
     onConsumedQuickLaunch: () -> Unit,
     onNavigate: (AppDestination) -> Unit,
+    onRegisterSubBackHandler: (((() -> Boolean)?) -> Unit),
     archiveViewModel: ArchiveViewModel,
     imageStudioViewModel: ImageStudioViewModel,
     fileBrowserViewModel: FileBrowserViewModel,
@@ -410,8 +526,7 @@ private fun ActiveFeatureWorkspace(
                 },
                 onCompress = { uris ->
                     if (uris.isNotEmpty()) {
-                        archiveViewModel.addSourceUris(uris)
-                        archiveViewModel.setCompressionDialogVisible(true)
+                        archiveViewModel.prepareCompressionFromFiles(uris)
                         onNavigate(AppDestination.ARCHIVE_MANAGER)
                     }
                 },
@@ -435,6 +550,7 @@ private fun ActiveFeatureWorkspace(
                 modifier = modifier
             )
         }
+
         AppDestination.ARCHIVE_MANAGER -> {
             ArchiveManagerScreen(
                 viewModel = archiveViewModel,
@@ -443,11 +559,13 @@ private fun ActiveFeatureWorkspace(
                 modifier = modifier
             )
         }
+
         AppDestination.IMAGE_STUDIO -> {
             ImageStudioScreen(
                 viewModel = imageStudioViewModel,
                 triggerOpenImagePicker = quickLaunchAction == QuickLaunchAction.OPEN_IMAGE_PICKER,
                 onConsumedQuickLaunch = onConsumedQuickLaunch,
+                onRegisterSubBackHandler = onRegisterSubBackHandler,
                 modifier = modifier
             )
         }

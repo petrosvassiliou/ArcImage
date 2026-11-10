@@ -160,4 +160,30 @@
     <string name="action_open_folder">Ouvrir</string>
     <string name="action_select">Sélectionner</string>
     <string name="files_drop_hint">Déposez des fichiers ici pour les ouvrir</string>
+
+    <!-- Navigation, Archive Info & Play-Protect-Safe Updates -->
+    <string name="action_back">Retour</string>
+    <string name="archive_destination_label">Dossier de destination</string>
+    <string name="archive_browse_folder">Choisir un dossier…</string>
+    <string name="archive_select_this_folder">Utiliser ce dossier</string>
+    <string name="archive_system_folder_picker">Sélecteur système…</string>
+    <string name="archive_info_title">Infos de l\'archive</string>
+    <string name="archive_file_size_label">Taille de l\'archive</string>
+    <string name="archive_total_unpacked_label">Total décompressé</string>
+    <string name="archive_contents_header">Contenu de l\'archive</string>
+    <string name="archive_selected_entry_title">Élément sélectionné</string>
+    <string name="action_updates">Mises à jour</string>
+    <string name="update_dialog_title">Mises à jour de l\'application</string>
+    <string name="update_current_version">Version installée : v%1$s</string>
+    <string name="update_auto_check_label">Vérification automatique des mises à jour</string>
+    <string name="update_auto_check_desc">Rechercher automatiquement les mises à jour au démarrage</string>
+    <string name="update_check_now">Rechercher des mises à jour</string>
+    <string name="update_checking">Recherche de mises à jour…</string>
+    <string name="update_up_to_date">ArcImage est à jour (v%1$s)</string>
+    <string name="update_available_title">Mise à jour disponible : v%1$s</string>
+    <string name="update_available_play">Une mise à jour est disponible sur Google Play</string>
+    <string name="update_install_now">Mettre à jour</string>
+    <string name="update_ready_restart">Mise à jour téléchargée — Redémarrer pour appliquer</string>
+    <string name="update_check_failed">Impossible de vérifier les mises à jour pour le moment</string>
+    <string name="update_play_protect_note">Les mises à jour passent par Google Play ou le navigateur système avec vérification complète Google Play Protect.</string>
 </resources>

@@ -44,6 +44,9 @@ class MainActivity : AppCompatActivity() {
             handleIncomingSystemIntent(intent)
         }
 
+        // Play-Protect-safe startup update check (respects user toggle & 12h cooldown)
+        shellViewModel.performStartupUpdateCheckIfEnabled()
+
         setContent {
             val shellState by shellViewModel.uiState.collectAsStateWithLifecycle()
 

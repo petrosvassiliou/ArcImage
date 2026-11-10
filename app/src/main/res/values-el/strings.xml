@@ -160,4 +160,30 @@
     <string name="action_open_folder">Άνοιγμα</string>
     <string name="action_select">Επιλογή</string>
     <string name="files_drop_hint">Αποθέστε αρχεία εδώ για να ανοίξουν</string>
+
+    <!-- Navigation, Archive Info & Play-Protect-Safe Updates -->
+    <string name="action_back">Πίσω</string>
+    <string name="archive_destination_label">Φάκελος προορισμού</string>
+    <string name="archive_browse_folder">Επιλογή φακέλου…</string>
+    <string name="archive_select_this_folder">Χρήση αυτού του φακέλου</string>
+    <string name="archive_system_folder_picker">Επιλογέας συστήματος…</string>
+    <string name="archive_info_title">Πληροφορίες αρχειοθήκης</string>
+    <string name="archive_file_size_label">Μέγεθος αρχειοθήκης</string>
+    <string name="archive_total_unpacked_label">Σύνολο αποσυμπίεσης</string>
+    <string name="archive_contents_header">Περιεχόμενα αρχειοθήκης</string>
+    <string name="archive_selected_entry_title">Επιλεγμένο στοιχείο</string>
+    <string name="action_updates">Ενημερώσεις</string>
+    <string name="update_dialog_title">Ενημερώσεις εφαρμογής</string>
+    <string name="update_current_version">Εγκατεστημένη έκδοση: v%1$s</string>
+    <string name="update_auto_check_label">Αυτόματος έλεγχος ενημερώσεων</string>
+    <string name="update_auto_check_desc">Αυτόματος έλεγχος για ενημερώσεις κατά την εκκίνηση</string>
+    <string name="update_check_now">Έλεγχος για ενημερώσεις</string>
+    <string name="update_checking">Έλεγχος για ενημερώσεις…</string>
+    <string name="update_up_to_date">Το ArcImage είναι ενημερωμένο (v%1$s)</string>
+    <string name="update_available_title">Διαθέσιμη ενημέρωση: v%1$s</string>
+    <string name="update_available_play">Υπάρχει διαθέσιμη ενημέρωση στο Google Play</string>
+    <string name="update_install_now">Ενημέρωση τώρα</string>
+    <string name="update_ready_restart">Η ενημέρωση ολοκληρώθηκε — Επανεκκίνηση για εφαρμογή</string>
+    <string name="update_check_failed">Αδυναμία ελέγχου ενημερώσεων αυτή τη στιγμή</string>
+    <string name="update_play_protect_note">Οι ενημερώσεις παρέχονται μέσω Google Play ή του προγράμματος περιήγησης με πλήρη έλεγχο Google Play Protect.</string>
 </resources>

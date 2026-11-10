@@ -1,10 +1,13 @@
 package com.arcimage.app.ui.viewmodel
 
+import android.app.Activity
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import com.arcimage.app.data.archive.ArchiveRepository
 import com.arcimage.app.data.files.FileSortOrder
 import com.arcimage.app.data.image.ImageRepository
+import com.arcimage.app.data.update.AppUpdateRepository
+import com.arcimage.app.data.update.UpdateCheckResult
 import com.arcimage.app.model.AppDestination
 import com.arcimage.app.model.ArchiveEntryItem
 import com.arcimage.app.model.ArchiveOperationProgress
@@ -18,6 +21,7 @@ import com.arcimage.app.model.ImageProcessConfig
 import com.arcimage.app.model.ResizeMode
 import com.arcimage.app.model.SourceItem
 import com.arcimage.app.model.ThemePreference
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +33,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -57,19 +62,93 @@ class ViewModelsContinuityTest {
     }
 
     @Test
-    fun `MainShellViewModel persists destination and theme across Googlebook window recreation`() {
+    fun `MainShellViewModel persists destination, back stack, and navigates back cleanly`() {
         val sharedHandle = SavedStateHandle()
         val vm1 = MainShellViewModel(sharedHandle)
 
         vm1.selectDestination(AppDestination.IMAGE_STUDIO)
+        vm1.selectDestination(AppDestination.ARCHIVE_MANAGER)
         vm1.setThemePreference(ThemePreference.DARK)
         vm1.setUseDynamicColor(false)
 
         // Recreate ViewModel from same SavedStateHandle (simulating cross-device continuity handoff)
         val vm2 = MainShellViewModel(sharedHandle)
-        assertEquals(AppDestination.IMAGE_STUDIO, vm2.uiState.value.activeDestination)
+        assertEquals(AppDestination.ARCHIVE_MANAGER, vm2.uiState.value.activeDestination)
         assertEquals(ThemePreference.DARK, vm2.uiState.value.themePreference)
         assertEquals(false, vm2.uiState.value.useDynamicColor)
+
+        // Back button pops ARCHIVE_MANAGER -> IMAGE_STUDIO -> FILES
+        assertTrue(vm2.navigateBackDestination())
+        assertEquals(AppDestination.IMAGE_STUDIO, vm2.uiState.value.activeDestination)
+        assertTrue(vm2.navigateBackDestination())
+        assertEquals(AppDestination.FILES, vm2.uiState.value.activeDestination)
+        assertFalse(vm2.navigateBackDestination())
+    }
+
+    @Test
+    fun `MainShellViewModel supports automatic startup check and manual update check`() = runTest {
+        var autoEnabled = true
+        var nextResult: UpdateCheckResult = UpdateCheckResult.ReleasePageUpdateAvailable(
+            currentVersion = "1.1.0",
+            latestVersion = "1.2.0",
+            releaseUrl = "https://github.com/petrosvassiliou/ArcImage/releases/tag/v1.2.0"
+        )
+        val fakeUpdateRepo = object : AppUpdateRepository {
+            override val currentVersionName: String = "1.1.0"
+            override fun isAutoCheckEnabled(): Boolean = autoEnabled
+            override fun setAutoCheckEnabled(enabled: Boolean) {
+                autoEnabled = enabled
+            }
+            override suspend fun checkForUpdates(isManual: Boolean): UpdateCheckResult = nextResult
+            override fun launchUpdateFlow(activity: Activity, result: UpdateCheckResult) = Unit
+            override fun completeFlexiblePlayUpdate() = Unit
+        }
+
+        val vm = MainShellViewModel(SavedStateHandle(), fakeUpdateRepo)
+        vm.performStartupUpdateCheckIfEnabled()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.showUpdateDialog)
+        assertEquals(true, vm.uiState.value.updateCheckResult?.hasUpdate)
+
+        // Manual check when up to date
+        vm.setUpdateDialogVisible(false)
+        nextResult = UpdateCheckResult.UpToDate("1.1.0")
+        vm.checkForUpdatesManually()
+        advanceUntilIdle()
+        assertEquals(false, vm.uiState.value.updateCheckResult?.hasUpdate)
+    }
+
+    @Test
+    fun `ArchiveViewModel prepareCompressionFromFiles prefills destination folder, archive name, and opens dialog`() = runTest {
+        val tempDir = File(RuntimeEnvironment.getApplication().cacheDir, "DocumentsTest").apply { mkdirs() }
+        val tempFile = File(tempDir, "QuarterlyReport.pdf").apply { writeText("sample") }
+        val fileUri = Uri.fromFile(tempFile)
+
+        val fakeArchiveRepo = object : ArchiveRepository {
+            override suspend fun resolveSourceItems(uris: List<Uri>): List<SourceItem> = listOf(
+                SourceItem(
+                    id = fileUri.toString(),
+                    uri = fileUri,
+                    name = "QuarterlyReport.pdf",
+                    sizeBytes = 6L,
+                    isDirectory = false
+                )
+            )
+            override suspend fun inspectArchive(archiveUri: Uri, password: String?) = emptyList<ArchiveEntryItem>()
+            override fun compressItems(items: List<SourceItem>, config: CompressionConfig, destinationTreeUri: Uri?) = flow<ArchiveOperationProgress> {}
+            override fun extractArchive(archiveUri: Uri, destinationTreeUri: Uri?, selectedEntryPaths: Set<String>?, password: String?) = flow<ArchiveOperationProgress> {}
+        }
+
+        val vm = ArchiveViewModel(fakeArchiveRepo, SavedStateHandle())
+        vm.prepareCompressionFromFiles(listOf(fileUri))
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state.showCompressionDialog)
+        assertEquals("QuarterlyReport", state.compressionConfig.archiveBaseName)
+        assertEquals(Uri.fromFile(tempDir), state.destinationTreeUri)
+        assertEquals("DocumentsTest", state.destinationLabel)
     }
 
     @Test

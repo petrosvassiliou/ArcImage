@@ -14,6 +14,13 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <!--
+      HTTPS release metadata check for non-Play-Store installs (Google Play installs use
+      official Google Play In-App Updates). ArcImage never self-installs APKs so it complies
+      fully with Google Play Protect guidelines.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
       Device file system access for the default "Files" home screen (file manager / archiver use case):
       - Android 11+ : "All files access" (MANAGE_EXTERNAL_STORAGE), granted by the user in system settings
       - Android 9-10: classic storage runtime permissions

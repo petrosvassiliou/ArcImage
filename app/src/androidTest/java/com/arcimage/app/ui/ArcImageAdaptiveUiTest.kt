@@ -4,11 +4,13 @@ import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.core.os.LocaleListCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -36,28 +38,36 @@ class ArcImageAdaptiveUiTest {
     }
 
     @Test
-    fun adaptiveShellDisplaysBrandingAndSwitchesBetweenArchiveAndImageStudio() {
+    fun adaptiveShellDisplaysBackButtonInEveryScreenAndNavigatesBack() {
         val context = composeRule.activity
+        val backDesc = context.getString(R.string.action_back)
 
-        // Brand title "ArcImage" is displayed
+        // Brand title "ArcImage" and Back button are displayed on initial Files screen
         composeRule.onNodeWithText("ArcImage").assertIsDisplayed()
+        composeRule.onAllNodesWithContentDescription(backDesc).onFirst().assertIsDisplayed()
 
-        // Navigate to Image Studio workspace
+        // Navigate to Image Studio workspace -> Back button displayed
         val imageStudioLabel = context.getString(R.string.nav_image_studio)
         composeRule.onAllNodesWithText(imageStudioLabel).onFirst().performClick()
 
         val emptyImageTitle = context.getString(R.string.image_empty_title)
         composeRule.onNodeWithText(emptyImageTitle).assertIsDisplayed()
+        composeRule.onAllNodesWithContentDescription(backDesc).onFirst().assertIsDisplayed()
 
-        // Navigate back to Archive Manager workspace and switch to Explore Archive mode
+        // Navigate to Archive Manager workspace -> Back button displayed
         val archiveManagerLabel = context.getString(R.string.nav_archive_manager)
         composeRule.onAllNodesWithText(archiveManagerLabel).onFirst().performClick()
+        composeRule.onAllNodesWithContentDescription(backDesc).onFirst().assertIsDisplayed()
 
         val exploreModeLabel = context.getString(R.string.archive_mode_explore)
         composeRule.onNodeWithText(exploreModeLabel).performClick()
 
         val emptyExploreTitle = context.getString(R.string.archive_empty_explore_title)
         composeRule.onNodeWithText(emptyExploreTitle).assertIsDisplayed()
+
+        // Clicking Back button pops Archive Manager -> Image Studio
+        composeRule.onAllNodesWithContentDescription(backDesc).onFirst().performClick()
+        composeRule.onNodeWithText(emptyImageTitle).assertIsDisplayed()
     }
 
     @Test
@@ -77,27 +87,43 @@ class ArcImageAdaptiveUiTest {
     }
 
     @Test
-    fun inAppLanguagePickerDisplaysAllSixLanguagesAndSwitchesToGreekRuntimeLocale() {
+    fun inAppLanguagePickerDisplaysSixCountryFlagsAndSwitchesToGreekRuntimeLocale() {
         val context = composeRule.activity
         val langDescription = context.getString(R.string.action_language)
 
-        // Open Language Picker modal
-        composeRule.onNodeWithContentDescription(langDescription).performClick()
+        // Open Country-Flag Language Picker modal
+        composeRule.onAllNodesWithContentDescription(langDescription).onFirst().performClick()
 
-        // Verify native names for all 6 supported languages appear
-        composeRule.onNodeWithText("English").assertIsDisplayed()
-        composeRule.onNodeWithText("Deutsch").assertIsDisplayed()
-        composeRule.onNodeWithText("Italiano").assertIsDisplayed()
-        composeRule.onNodeWithText("Français").assertIsDisplayed()
-        composeRule.onNodeWithText("Español").assertIsDisplayed()
-        composeRule.onNodeWithText("Ελληνικά").assertIsDisplayed()
+        // Verify all 6 country flag cards appear (with accessibility content descriptions, no text labels)
+        composeRule.onNodeWithContentDescription("English").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Deutsch").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Italiano").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Français").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Español").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Ελληνικά").assertIsDisplayed()
 
-        // Switch runtime language to Greek
-        composeRule.onNodeWithText("Ελληνικά").performClick()
+        // Switch runtime language to Greek via the Greek flag tile
+        composeRule.onNodeWithContentDescription("Ελληνικά").performClick()
         composeRule.waitForIdle()
 
         assertEquals("el", AppCompatDelegate.getApplicationLocales().toLanguageTags())
         composeRule.onAllNodesWithText("Στούντιο Εικόνας").onFirst().assertIsDisplayed()
+    }
+
+    @Test
+    fun updateDialogOpensAndDisplaysManualAndAutoUpdateControls() {
+        val context = composeRule.activity
+        val updatesDesc = context.getString(R.string.action_updates)
+
+        composeRule.onAllNodesWithContentDescription(updatesDesc).onFirst().performClick()
+
+        composeRule.onNodeWithText(context.getString(R.string.update_dialog_title)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.update_check_now))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.update_auto_check_label))
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test
