@@ -47,7 +47,8 @@ fun Modifier.arcKeyboardShortcuts(
     onSelectAll: () -> Unit,
     onOpenPicker: () -> Unit,
     onDeleteSelected: () -> Unit,
-    onEscape: () -> Unit
+    onEscape: () -> Unit,
+    onNavigateUp: () -> Unit = {}
 ): Modifier = this.onPreviewKeyEvent { keyEvent ->
     if (keyEvent.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
 
@@ -61,8 +62,12 @@ fun Modifier.arcKeyboardShortcuts(
             onOpenPicker()
             true
         }
-        keyEvent.key == Key.Delete || keyEvent.key == Key.Backspace -> {
+        keyEvent.key == Key.Delete -> {
             onDeleteSelected()
+            true
+        }
+        keyEvent.key == Key.Backspace -> {
+            onNavigateUp()
             true
         }
         keyEvent.key == Key.Escape -> {

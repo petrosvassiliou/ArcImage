@@ -162,6 +162,31 @@ class FileBrowserViewModel(
         _uiState.update { it.copy(selectedPaths = emptySet()) }
     }
 
+    fun deletePaths(paths: Collection<String>) {
+        val targets = paths.toSet()
+        if (targets.isEmpty()) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                targets.forEach { path ->
+                    runCatching {
+                        val file = File(path)
+                        if (file.exists()) {
+                            file.deleteRecursively()
+                        }
+                    }
+                }
+            }
+            _uiState.update { state ->
+                state.copy(selectedPaths = state.selectedPaths - targets)
+            }
+            refresh()
+        }
+    }
+
+    fun deleteSelected() {
+        deletePaths(_uiState.value.selectedPaths)
+    }
+
     private fun setRoot(rootPath: String, persist: Boolean) {
         if (persist) savedStateHandle[KEY_ROOT] = rootPath
         _uiState.update { it.copy(activeRootPath = rootPath) }

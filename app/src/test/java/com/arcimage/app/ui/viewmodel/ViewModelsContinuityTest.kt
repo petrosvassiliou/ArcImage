@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -309,4 +310,80 @@ class ViewModelsContinuityTest {
         assertEquals(FileSortOrder.DATE, vm2.uiState.value.sortOrder)
         assertEquals("trip", vm2.uiState.value.searchQuery)
     }
+
+    @Test
+    fun `MainShellViewModel dispatches global shortcut events and closes language dropdown on Escape`() =
+        runTest(testDispatcher) {
+            val vm = MainShellViewModel(SavedStateHandle())
+            val received = mutableListOf<ShortcutAction>()
+            val collectorJob = launch {
+                vm.shortcutEvents.collect { received += it }
+            }
+            advanceUntilIdle()
+
+            vm.setLanguageDialogVisible(true)
+            assertTrue(vm.uiState.value.showLanguageDialog)
+
+            vm.dispatchShortcut(ShortcutAction.OPEN)
+            vm.dispatchShortcut(ShortcutAction.SELECT_ALL)
+            vm.dispatchShortcut(ShortcutAction.DELETE_SELECTED)
+            vm.dispatchShortcut(ShortcutAction.ESCAPE)
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.showLanguageDialog)
+            assertEquals(
+                listOf(
+                    ShortcutAction.OPEN,
+                    ShortcutAction.SELECT_ALL,
+                    ShortcutAction.DELETE_SELECTED,
+                    ShortcutAction.ESCAPE
+                ),
+                received
+            )
+            collectorJob.cancel()
+        }
+
+    @Test
+    fun `FileBrowserViewModel deletes selected files from disk and refreshes folder`() =
+        runTest(testDispatcher) {
+            val context = RuntimeEnvironment.getApplication()
+            val tempDir = File(context.cacheDir, "delete_test_${System.nanoTime()}").apply { mkdirs() }
+            val keepFile = File(tempDir, "keep.txt").apply { writeText("keep") }
+            val removeFile = File(tempDir, "remove.txt").apply { writeText("remove") }
+
+            try {
+                val vm = FileBrowserViewModel(context, SavedStateHandle(), accessChecker = { true })
+                vm.openRoot(tempDir.absolutePath)
+                advanceUntilIdle()
+                val loadDeadline = System.currentTimeMillis() + 3_000L
+                while ((vm.uiState.value.isLoading || vm.uiState.value.entries.size != 2) &&
+                    System.currentTimeMillis() < loadDeadline
+                ) {
+                    Thread.sleep(15)
+                    advanceUntilIdle()
+                }
+
+                assertEquals(2, vm.uiState.value.entries.size)
+                vm.toggleSelection(removeFile.absolutePath)
+                assertEquals(setOf(removeFile.absolutePath), vm.uiState.value.selectedPaths)
+
+                vm.deleteSelected()
+                advanceUntilIdle()
+                val deleteDeadline = System.currentTimeMillis() + 3_000L
+                while ((removeFile.exists() || vm.uiState.value.isLoading || vm.uiState.value.entries.size != 1) &&
+                    System.currentTimeMillis() < deleteDeadline
+                ) {
+                    Thread.sleep(15)
+                    advanceUntilIdle()
+                }
+
+                assertFalse(removeFile.exists())
+                assertTrue(keepFile.exists())
+                assertTrue(vm.uiState.value.selectedPaths.isEmpty())
+                assertEquals(listOf(keepFile.absolutePath), vm.uiState.value.entries.map { it.path })
+            } finally {
+                tempDir.deleteRecursively()
+            }
+        }
 }
+

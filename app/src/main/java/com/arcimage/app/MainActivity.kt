@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -22,6 +23,7 @@ import com.arcimage.app.ui.viewmodel.FileBrowserViewModel
 import com.arcimage.app.ui.viewmodel.ImageStudioViewModel
 import com.arcimage.app.ui.viewmodel.MainShellViewModel
 import com.arcimage.app.ui.viewmodel.QuickLaunchAction
+import com.arcimage.app.ui.viewmodel.ShortcutAction
 
 class MainActivity : AppCompatActivity() {
 
@@ -62,6 +64,56 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val isActionDown = event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0
+        val ctrlOrMeta = event.isCtrlPressed || event.isMetaPressed
+
+        // Ctrl+O / Cmd+O always opens the active screen's file picker regardless of focus
+        if (isActionDown && ctrlOrMeta && event.keyCode == KeyEvent.KEYCODE_O) {
+            shellViewModel.dispatchShortcut(ShortcutAction.OPEN)
+            return true
+        }
+
+        if (super.dispatchKeyEvent(event)) {
+            return true
+        }
+
+        if (isActionDown) {
+            val focusedView = window?.decorView?.findFocus()
+            val isEditingText = focusedView?.onCheckIsTextEditor() == true
+            when {
+                !isEditingText && ctrlOrMeta && event.keyCode == KeyEvent.KEYCODE_A -> {
+                    shellViewModel.dispatchShortcut(ShortcutAction.SELECT_ALL)
+                    return true
+                }
+                !isEditingText && event.keyCode == KeyEvent.KEYCODE_FORWARD_DEL -> {
+                    shellViewModel.dispatchShortcut(ShortcutAction.DELETE_SELECTED)
+                    return true
+                }
+                !isEditingText && event.keyCode == KeyEvent.KEYCODE_DEL -> {
+                    val hasSelection = when (shellViewModel.uiState.value.activeDestination) {
+                        AppDestination.FILES -> fileBrowserViewModel.uiState.value.selectedPaths.isNotEmpty()
+                        AppDestination.ARCHIVE_MANAGER -> {
+                            val s = archiveViewModel.uiState.value
+                            s.selectedSourceIds.isNotEmpty() || s.selectedEntryPaths.isNotEmpty()
+                        }
+                        AppDestination.IMAGE_STUDIO -> imageStudioViewModel.uiState.value.selectedIds.isNotEmpty()
+                    }
+                    shellViewModel.dispatchShortcut(
+                        if (hasSelection) ShortcutAction.DELETE_SELECTED else ShortcutAction.NAVIGATE_UP
+                    )
+                    return true
+                }
+                event.keyCode == KeyEvent.KEYCODE_ESCAPE -> {
+                    focusedView?.clearFocus()
+                    shellViewModel.dispatchShortcut(ShortcutAction.ESCAPE)
+                    return true
+                }
+            }
+        }
+        return false
     }
 
     override fun onNewIntent(intent: Intent) {

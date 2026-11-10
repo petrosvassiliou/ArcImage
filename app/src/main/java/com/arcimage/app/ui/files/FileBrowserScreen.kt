@@ -15,7 +15,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +44,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Compress
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Folder
@@ -62,9 +62,11 @@ import androidx.compose.material.icons.rounded.SdCard
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.ViewAgenda
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -78,6 +80,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -89,8 +92,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -116,22 +117,23 @@ import com.arcimage.app.ui.components.DropZoneOverlay
 import com.arcimage.app.ui.theme.ArcBrandGradient
 import com.arcimage.app.ui.util.arcFileDropTarget
 import com.arcimage.app.ui.util.arcHoverable
-import com.arcimage.app.ui.util.arcKeyboardShortcuts
 import com.arcimage.app.ui.util.arcPointerContextActions
 import com.arcimage.app.ui.util.rememberArcHoverState
 import com.arcimage.app.ui.viewmodel.FileBrowserUiState
 import com.arcimage.app.ui.viewmodel.FileBrowserViewModel
+import com.arcimage.app.ui.viewmodel.ShortcutAction
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Default ArcImage home: a modern browser over the REAL device file system
  * (internal shared storage, SD cards, USB drives). No sample or placeholder content.
  *
  * - Tap a folder to open it, an archive to inspect it, an image to edit it.
- * - Long-press / right-click for the context menu; multi-select to compress or batch-edit.
- * - Keyboard: Ctrl+A select all, Ctrl+O open files, Backspace up, Esc clear selection.
+ * - Long-press / right-click for the context menu; multi-select to compress, batch-edit, or delete.
+ * - Keyboard: Ctrl+O open files, Ctrl+A select all, Del delete selected, Esc clear selection.
  */
 @Composable
 fun FileBrowserScreen(
@@ -140,11 +142,13 @@ fun FileBrowserScreen(
     onOpenImages: (List<Uri>) -> Unit,
     onCompress: (List<Uri>) -> Unit,
     onOpenDocuments: (List<Uri>) -> Unit,
+    shortcutEvents: Flow<ShortcutAction>? = null,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var dropHover by remember { mutableStateOf(false) }
+    var pendingDeletePaths by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     // Re-check access whenever the user returns (e.g. from the "All files access" settings page)
     LifecycleResumeEffect(Unit) {
@@ -173,6 +177,37 @@ fun FileBrowserScreen(
             }
         } else {
             legacyPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
+
+    LaunchedEffect(shortcutEvents) {
+        shortcutEvents?.collect { action ->
+            val current = viewModel.uiState.value
+            when (action) {
+                ShortcutAction.OPEN -> documentsLauncher.launch(arrayOf("*/*"))
+                ShortcutAction.SELECT_ALL -> {
+                    if (current.hasStorageAccess) {
+                        viewModel.selectAll()
+                    }
+                }
+                ShortcutAction.DELETE_SELECTED -> {
+                    if (current.hasStorageAccess && current.selectedPaths.isNotEmpty()) {
+                        pendingDeletePaths = current.selectedPaths
+                    }
+                }
+                ShortcutAction.ESCAPE -> {
+                    when {
+                        pendingDeletePaths.isNotEmpty() -> pendingDeletePaths = emptySet()
+                        current.selectedPaths.isNotEmpty() -> viewModel.clearSelection()
+                        current.searchQuery.isNotEmpty() -> viewModel.setSearchQuery("")
+                    }
+                }
+                ShortcutAction.NAVIGATE_UP -> {
+                    if (current.hasStorageAccess && pendingDeletePaths.isEmpty()) {
+                        viewModel.navigateUp()
+                    }
+                }
+            }
         }
     }
 
@@ -239,18 +274,18 @@ fun FileBrowserScreen(
                     onOpenEntry = openEntry,
                     onToggleSelection = viewModel::toggleSelection,
                     onCompressEntry = { onCompress(listOf(Uri.fromFile(File(it.path)))) },
-                    onSelectAll = viewModel::selectAll,
-                    onOpenPicker = { documentsLauncher.launch(arrayOf("*/*")) },
-                    onBackspace = {
-                        if (state.selectedPaths.isNotEmpty()) viewModel.clearSelection() else viewModel.navigateUp()
-                    },
-                    onEscape = viewModel::clearSelection,
+                    onDeleteEntry = { entry -> pendingDeletePaths = setOf(entry.path) },
                     modifier = Modifier.weight(1f)
                 )
 
                 SelectionBar(
                     state = state,
                     onClear = viewModel::clearSelection,
+                    onDeleteSelected = {
+                        if (state.selectedPaths.isNotEmpty()) {
+                            pendingDeletePaths = state.selectedPaths
+                        }
+                    },
                     onCompress = {
                         onCompress(state.selectedEntries.map { Uri.fromFile(File(it.path)) })
                         viewModel.clearSelection()
@@ -269,6 +304,41 @@ fun FileBrowserScreen(
         }
 
         DropZoneOverlay(visible = dropHover)
+    }
+
+    if (pendingDeletePaths.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { pendingDeletePaths = emptySet() },
+            icon = {
+                Icon(
+                    imageVector = Icons.Rounded.DeleteOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text(stringResource(R.string.files_delete_title)) },
+            text = { Text(stringResource(R.string.files_delete_confirm, pendingDeletePaths.size)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val targets = pendingDeletePaths
+                        pendingDeletePaths = emptySet()
+                        viewModel.deletePaths(targets)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text(stringResource(R.string.files_action_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeletePaths = emptySet() }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 }
 
@@ -552,14 +622,9 @@ private fun FileListContainer(
     onOpenEntry: (DeviceFileEntry) -> Unit,
     onToggleSelection: (String) -> Unit,
     onCompressEntry: (DeviceFileEntry) -> Unit,
-    onSelectAll: () -> Unit,
-    onOpenPicker: () -> Unit,
-    onBackspace: () -> Unit,
-    onEscape: () -> Unit,
+    onDeleteEntry: (DeviceFileEntry) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(state.currentPath) { runCatching { focusRequester.requestFocus() } }
     val visible = state.visibleEntries
 
     Surface(
@@ -568,14 +633,6 @@ private fun FileListContainer(
         modifier = modifier
             .fillMaxWidth()
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), MaterialTheme.shapes.large)
-            .focusRequester(focusRequester)
-            .arcKeyboardShortcuts(
-                onSelectAll = onSelectAll,
-                onOpenPicker = onOpenPicker,
-                onDeleteSelected = onBackspace,
-                onEscape = onEscape
-            )
-            .focusable()
     ) {
         Column {
             if (state.isLoading) {
@@ -600,7 +657,8 @@ private fun FileListContainer(
                             onClick = { onEntryClick(entry) },
                             onOpen = { onOpenEntry(entry) },
                             onToggleSelection = { onToggleSelection(entry.path) },
-                            onCompress = { onCompressEntry(entry) }
+                            onCompress = { onCompressEntry(entry) },
+                            onDelete = { onDeleteEntry(entry) }
                         )
                     }
                 }
@@ -618,7 +676,8 @@ private fun FileListContainer(
                             onClick = { onEntryClick(entry) },
                             onOpen = { onOpenEntry(entry) },
                             onToggleSelection = { onToggleSelection(entry.path) },
-                            onCompress = { onCompressEntry(entry) }
+                            onCompress = { onCompressEntry(entry) },
+                            onDelete = { onDeleteEntry(entry) }
                         )
                     }
                 }
@@ -635,7 +694,8 @@ private fun FileRow(
     onClick: () -> Unit,
     onOpen: () -> Unit,
     onToggleSelection: () -> Unit,
-    onCompress: () -> Unit
+    onCompress: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val (hoverSource, hovered) = rememberArcHoverState()
     var menuOpen by remember { mutableStateOf(false) }
@@ -694,7 +754,8 @@ private fun FileRow(
             onDismiss = { menuOpen = false },
             onOpen = onOpen,
             onToggleSelection = onToggleSelection,
-            onCompress = onCompress
+            onCompress = onCompress,
+            onDelete = onDelete
         )
     }
 }
@@ -706,7 +767,8 @@ private fun FileGridCard(
     onClick: () -> Unit,
     onOpen: () -> Unit,
     onToggleSelection: () -> Unit,
-    onCompress: () -> Unit
+    onCompress: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val (hoverSource, hovered) = rememberArcHoverState()
     var menuOpen by remember { mutableStateOf(false) }
@@ -770,7 +832,8 @@ private fun FileGridCard(
             onDismiss = { menuOpen = false },
             onOpen = onOpen,
             onToggleSelection = onToggleSelection,
-            onCompress = onCompress
+            onCompress = onCompress,
+            onDelete = onDelete
         )
     }
 }
@@ -783,7 +846,8 @@ private fun EntryContextMenu(
     onDismiss: () -> Unit,
     onOpen: () -> Unit,
     onToggleSelection: () -> Unit,
-    onCompress: () -> Unit
+    onCompress: () -> Unit,
+    onDelete: () -> Unit
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         if (entry.kind != FileKind.OTHER) {
@@ -820,6 +884,25 @@ private fun EntryContextMenu(
             onClick = {
                 onDismiss()
                 onCompress()
+            }
+        )
+        DropdownMenuItem(
+            text = {
+                Text(
+                    text = stringResource(R.string.files_action_delete),
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.DeleteOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            onClick = {
+                onDismiss()
+                onDelete()
             }
         )
     }
@@ -893,6 +976,7 @@ private fun EmptyFolderState(isSearch: Boolean) {
 private fun SelectionBar(
     state: FileBrowserUiState,
     onClear: () -> Unit,
+    onDeleteSelected: () -> Unit,
     onCompress: () -> Unit,
     onEditImages: () -> Unit
 ) {
@@ -928,6 +1012,13 @@ private fun SelectionBar(
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f)
                 )
+                IconButton(onClick = onDeleteSelected) {
+                    Icon(
+                        Icons.Rounded.DeleteOutline,
+                        contentDescription = stringResource(R.string.files_action_delete),
+                        tint = MaterialTheme.colorScheme.inverseOnSurface
+                    )
+                }
                 if (hasImages) {
                     FilledTonalButton(onClick = onEditImages) {
                         Icon(Icons.Rounded.PhotoSizeSelectLarge, contentDescription = null, modifier = Modifier.size(18.dp))

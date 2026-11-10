@@ -14,8 +14,8 @@ android {
         minSdk = 28
         targetSdk = 36
         // CI overrides these via -PversionCode / -PversionName (e.g. from a v1.2.3 tag)
-        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 10101
-        versionName = (project.findProperty("versionName") as String?) ?: "1.1.1"
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 10102
+        versionName = (project.findProperty("versionName") as String?) ?: "1.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

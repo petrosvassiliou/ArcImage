@@ -5,18 +5,17 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.SystemUpdateAlt
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -26,11 +25,9 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -40,99 +37,105 @@ import com.arcimage.app.model.AppLanguage
 import com.arcimage.app.model.ThemePreference
 
 /**
- * Flag-based language selector: displays crisp country flags instead of text labels
- * (UK, Germany, Italy, France, Spain, Greece), while keeping native language names
- * as accessibility `contentDescription`s for TalkBack and UI testing.
+ * Country-flag dropdown language selector: displays the active country flag with a dropdown
+ * arrow and opens an anchored Material 3 [DropdownMenu] listing all 6 supported country flags
+ * (UK, Germany, Italy, France, Spain, Greece), while keeping native language names as
+ * accessibility `contentDescription`s for TalkBack and UI testing.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun LanguagePickerDialog(
+fun LanguageFlagDropdown(
     currentLanguage: AppLanguage,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     onSelectLanguage: (AppLanguage) -> Unit,
-    onDismiss: () -> Unit
+    modifier: Modifier = Modifier
 ) {
     val activeFlagLanguage = resolveFlagLanguage(currentLanguage)
+    val actionLangDesc = stringResource(R.string.action_language)
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = Icons.Outlined.Language,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-        },
-        title = {
-            Text(text = stringResource(R.string.language_dialog_title))
-        },
-        text = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                FlowRow(
-                    maxItemsInEachRow = 3,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    SelectableFlagLanguages.forEach { lang ->
-                        val isSelected = lang == activeFlagLanguage
-                        Surface(
-                            onClick = { onSelectLanguage(lang) },
-                            shape = RoundedCornerShape(18.dp),
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainerHigh
-                            },
-                            border = if (isSelected) {
-                                BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary)
-                            } else {
-                                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                            },
-                            modifier = Modifier.semantics(mergeDescendants = true) {
-                                contentDescription = lang.nativeDisplayName
-                            }
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CountryFlagIcon(
-                                    language = lang,
-                                    width = 56.dp,
-                                    height = 38.dp,
-                                    cornerRadius = 8.dp
-                                )
-                                if (isSelected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .size(18.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Check,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimary,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+    Box(modifier = modifier) {
+        Surface(
+            onClick = { onExpandedChange(!expanded) },
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+            modifier = Modifier.semantics(mergeDescendants = true) {
+                contentDescription = actionLangDesc
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.action_close))
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 10.dp, end = 6.dp, top = 7.dp, bottom = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                CountryFlagIcon(
+                    language = activeFlagLanguage,
+                    width = 28.dp,
+                    height = 19.dp,
+                    cornerRadius = 4.dp
+                )
+                Icon(
+                    imageVector = Icons.Rounded.ArrowDropDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
-    )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            SelectableFlagLanguages.forEach { lang ->
+                val isSelected = lang == activeFlagLanguage
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            CountryFlagIcon(
+                                language = lang,
+                                width = 38.dp,
+                                height = 25.dp,
+                                cornerRadius = 5.dp
+                            )
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    },
+                    onClick = {
+                        onSelectLanguage(lang)
+                    },
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .then(
+                            if (isSelected) {
+                                Modifier.background(
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                                )
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = lang.nativeDisplayName
+                        }
+                )
+            }
+        }
+    }
 }
 
 @Composable

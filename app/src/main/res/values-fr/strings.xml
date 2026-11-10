@@ -159,6 +159,9 @@
     <string name="action_open_archive">Ouvrir l\'archive</string>
     <string name="action_open_folder">Ouvrir</string>
     <string name="action_select">Sélectionner</string>
+    <string name="files_action_delete">Supprimer</string>
+    <string name="files_delete_title">Supprimer les éléments sélectionnés ?</string>
+    <string name="files_delete_confirm">Supprimer définitivement %1$d élément(s) de cet appareil ?</string>
     <string name="files_drop_hint">Déposez des fichiers ici pour les ouvrir</string>
 
     <!-- Navigation, Archive Info & Play-Protect-Safe Updates -->

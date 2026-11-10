@@ -3,7 +3,6 @@ package com.arcimage.app.ui.components
 import android.app.Activity
 import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -61,11 +60,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -75,17 +83,20 @@ import androidx.window.core.layout.WindowWidthSizeClass
 import com.arcimage.app.R
 import com.arcimage.app.data.util.DocumentUriHelper
 import com.arcimage.app.model.AppDestination
-import com.arcimage.app.model.AppLanguage
 import com.arcimage.app.model.ArchiveFormat
 import com.arcimage.app.model.ImageFormat
 import com.arcimage.app.ui.archive.ArchiveManagerScreen
 import com.arcimage.app.ui.files.FileBrowserScreen
 import com.arcimage.app.ui.image.ImageStudioScreen
+import com.arcimage.app.ui.util.arcHoverable
+import com.arcimage.app.ui.util.rememberArcHoverState
 import com.arcimage.app.ui.viewmodel.ArchiveViewModel
 import com.arcimage.app.ui.viewmodel.FileBrowserViewModel
 import com.arcimage.app.ui.viewmodel.ImageStudioViewModel
 import com.arcimage.app.ui.viewmodel.MainShellViewModel
 import com.arcimage.app.ui.viewmodel.QuickLaunchAction
+import com.arcimage.app.ui.viewmodel.ShortcutAction
+import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun ArcImageShell(
@@ -97,6 +108,8 @@ fun ArcImageShell(
     val shellState by shellViewModel.uiState.collectAsStateWithLifecycle()
     val fileBrowserState by fileBrowserViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val localView = LocalView.current
+    val focusManager = LocalFocusManager.current
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val isCompactScreen =
         adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT
@@ -149,245 +162,273 @@ fun ArcImageShell(
         }
     }
 
-    if (isCompactScreen) {
-        // =====================================================================
-        // COMPACT SCREENS (Android Phones): Back button + brand top bar + Bottom NavigationBar
-        // =====================================================================
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.surface,
-            topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                        .padding(start = 10.dp, end = 6.dp, top = 10.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ShellBackButton(onClick = onBackClick)
-                    ArcImageLogo(size = 34.dp)
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = stringResource(shellState.activeDestination.labelRes),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    LanguageFlagButton(
-                        language = shellState.currentLanguage,
-                        onClick = { shellViewModel.setLanguageDialogVisible(true) }
-                    )
-                    UpdateStatusButton(
-                        hasUpdate = shellState.updateCheckResult?.hasUpdate == true,
-                        onClick = { shellViewModel.setUpdateDialogVisible(true) }
-                    )
-                    themeButton()
-                }
-            },
-            bottomBar = {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                    AppDestination.entries.forEach { destination ->
-                        val selected = shellState.activeDestination == destination
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = { shellViewModel.selectDestination(destination) },
-                            icon = {
-                                Icon(
-                                    imageVector = destinationIcon(destination, selected),
-                                    contentDescription = stringResource(destination.labelRes)
-                                )
-                            },
-                            label = {
-                                Text(
-                                    text = stringResource(destination.labelRes),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                            )
-                        )
-                    }
-                }
-            }
-        ) { innerPadding ->
-            ActiveFeatureWorkspace(
-                destination = shellState.activeDestination,
-                quickLaunchAction = shellState.quickLaunchRequest,
-                onConsumedQuickLaunch = { shellViewModel.consumeQuickLaunch() },
-                onNavigate = { shellViewModel.selectDestination(it) },
-                onRegisterSubBackHandler = { subScreenBackHandler = it },
-                archiveViewModel = archiveViewModel,
-                imageStudioViewModel = imageStudioViewModel,
-                fileBrowserViewModel = fileBrowserViewModel,
-                modifier = Modifier.padding(innerPadding)
-            )
+    // Bubble-phase key handler complements MainActivity.dispatchKeyEvent when a Compose widget holds focus
+    val shellShortcutModifier = Modifier.onKeyEvent { keyEvent ->
+        if (keyEvent.type != KeyEventType.KeyDown || keyEvent.nativeKeyEvent.repeatCount > 0) {
+            return@onKeyEvent false
         }
-    } else {
-        // =====================================================================
-        // EXPANDED SCREENS (Googlebook OS Laptops / Desktops):
-        // Navigation Rail with "ArcImage" header + floating rounded workspace panel
-        // =====================================================================
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-            ) {
-                NavigationRail(
-                    containerColor = Color.Transparent,
-                    header = {
-                        Column(
-                            modifier = Modifier.padding(top = 16.dp, bottom = 20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            ArcImageLogo(size = 48.dp)
+        val ctrlOrMeta = keyEvent.isCtrlPressed || keyEvent.isMetaPressed
+        val isEditingText =
+            localView.findFocus()?.onCheckIsTextEditor() == true || localView.onCheckIsTextEditor()
+
+        when {
+            ctrlOrMeta && keyEvent.key == Key.O -> {
+                shellViewModel.dispatchShortcut(ShortcutAction.OPEN)
+                true
+            }
+            !isEditingText && ctrlOrMeta && keyEvent.key == Key.A -> {
+                shellViewModel.dispatchShortcut(ShortcutAction.SELECT_ALL)
+                true
+            }
+            !isEditingText && keyEvent.key == Key.Delete -> {
+                shellViewModel.dispatchShortcut(ShortcutAction.DELETE_SELECTED)
+                true
+            }
+            !isEditingText && keyEvent.key == Key.Backspace -> {
+                val hasSelection = when (shellViewModel.uiState.value.activeDestination) {
+                    AppDestination.FILES -> fileBrowserViewModel.uiState.value.selectedPaths.isNotEmpty()
+                    AppDestination.ARCHIVE_MANAGER -> {
+                        val s = archiveViewModel.uiState.value
+                        s.selectedSourceIds.isNotEmpty() || s.selectedEntryPaths.isNotEmpty()
+                    }
+                    AppDestination.IMAGE_STUDIO -> imageStudioViewModel.uiState.value.selectedIds.isNotEmpty()
+                }
+                shellViewModel.dispatchShortcut(
+                    if (hasSelection) ShortcutAction.DELETE_SELECTED else ShortcutAction.NAVIGATE_UP
+                )
+                true
+            }
+            keyEvent.key == Key.Escape -> {
+                focusManager.clearFocus()
+                shellViewModel.dispatchShortcut(ShortcutAction.ESCAPE)
+                true
+            }
+            else -> false
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().then(shellShortcutModifier)) {
+        if (isCompactScreen) {
+            // =====================================================================
+            // COMPACT SCREENS (Android Phones): Back button + brand top bar + Bottom NavigationBar
+            // =====================================================================
+            Scaffold(
+                containerColor = MaterialTheme.colorScheme.surface,
+                topBar = {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+                            .padding(start = 10.dp, end = 6.dp, top = 10.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ShellBackButton(onClick = onBackClick)
+                        ArcImageLogo(size = 34.dp)
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.app_name),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = stringResource(shellState.activeDestination.labelRes),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(96.dp)
-                ) {
-                    AppDestination.entries.forEach { destination ->
-                        val selected = shellState.activeDestination == destination
-                        NavigationRailItem(
-                            selected = selected,
-                            onClick = { shellViewModel.selectDestination(destination) },
-                            icon = {
-                                Icon(
-                                    imageVector = destinationIcon(destination, selected),
-                                    contentDescription = stringResource(destination.labelRes)
-                                )
-                            },
-                            label = {
-                                Text(
-                                    text = stringResource(destination.labelRes),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            },
-                            colors = NavigationRailItemDefaults.colors(
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                            )
+                        LanguageFlagDropdown(
+                            currentLanguage = shellState.currentLanguage,
+                            expanded = shellState.showLanguageDialog,
+                            onExpandedChange = { shellViewModel.setLanguageDialogVisible(it) },
+                            onSelectLanguage = { shellViewModel.applyAppLanguage(it) }
                         )
-                        Spacer(modifier = Modifier.height(10.dp))
+                        UpdateStatusButton(
+                            hasUpdate = shellState.updateCheckResult?.hasUpdate == true,
+                            onClick = { shellViewModel.setUpdateDialogVisible(true) }
+                        )
+                        themeButton()
                     }
-
-                    Spacer(modifier = Modifier.weight(1f))
-                    UpdateStatusButton(
-                        hasUpdate = shellState.updateCheckResult?.hasUpdate == true,
-                        onClick = { shellViewModel.setUpdateDialogVisible(true) }
-                    )
-                    themeButton()
-                    Spacer(modifier = Modifier.height(16.dp))
+                },
+                bottomBar = {
+                    NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                        AppDestination.entries.forEach { destination ->
+                            val selected = shellState.activeDestination == destination
+                            NavigationBarItem(
+                                selected = selected,
+                                onClick = { shellViewModel.selectDestination(destination) },
+                                icon = {
+                                    Icon(
+                                        imageVector = destinationIcon(destination, selected),
+                                        contentDescription = stringResource(destination.labelRes)
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        text = stringResource(destination.labelRes),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                )
+                            )
+                        }
+                    }
                 }
-
-                // Floating, rounded workspace panel (modern desktop look)
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surface,
+            ) { innerPadding ->
+                ActiveFeatureWorkspace(
+                    destination = shellState.activeDestination,
+                    quickLaunchAction = shellState.quickLaunchRequest,
+                    onConsumedQuickLaunch = { shellViewModel.consumeQuickLaunch() },
+                    onNavigate = { shellViewModel.selectDestination(it) },
+                    onRegisterSubBackHandler = { subScreenBackHandler = it },
+                    shortcutEvents = shellViewModel.shortcutEvents,
+                    archiveViewModel = archiveViewModel,
+                    imageStudioViewModel = imageStudioViewModel,
+                    fileBrowserViewModel = fileBrowserViewModel,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
+        } else {
+            // =====================================================================
+            // EXPANDED SCREENS (Googlebook OS Laptops / Desktops):
+            // Navigation Rail with "ArcImage" header + floating rounded workspace panel
+            // =====================================================================
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(top = 10.dp, end = 10.dp, bottom = 10.dp)
+                        .fillMaxSize()
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
                 ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        // Desktop workspace header: Back button, title, subtitle, shortcut hint & Country Flag button
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 18.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            ShellBackButton(onClick = onBackClick)
-
-                            Column(modifier = Modifier.weight(1f)) {
+                    NavigationRail(
+                        containerColor = Color.Transparent,
+                        header = {
+                            Column(
+                                modifier = Modifier.padding(top = 16.dp, bottom = 20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                ArcImageLogo(size = 48.dp)
                                 Text(
-                                    text = stringResource(shellState.activeDestination.labelRes),
-                                    style = MaterialTheme.typography.headlineSmall,
+                                    text = stringResource(R.string.app_name),
+                                    style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Text(
-                                    text = stringResource(R.string.app_subtitle),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
-
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
+                        },
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(96.dp)
+                    ) {
+                        AppDestination.entries.forEach { destination ->
+                            val selected = shellState.activeDestination == destination
+                            NavigationRailItem(
+                                selected = selected,
+                                onClick = { shellViewModel.selectDestination(destination) },
+                                icon = {
                                     Icon(
-                                        imageVector = Icons.Outlined.Keyboard,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        imageVector = destinationIcon(destination, selected),
+                                        contentDescription = stringResource(destination.labelRes)
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        text = stringResource(destination.labelRes),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                colors = NavigationRailItemDefaults.colors(
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+                        UpdateStatusButton(
+                            hasUpdate = shellState.updateCheckResult?.hasUpdate == true,
+                            onClick = { shellViewModel.setUpdateDialogVisible(true) }
+                        )
+                        themeButton()
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Floating, rounded workspace panel (modern desktop look)
+                    Surface(
+                        shape = RoundedCornerShape(28.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(top = 10.dp, end = 10.dp, bottom = 10.dp)
+                    ) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            // Desktop workspace header: Back button, title, interactive shortcut bar & Country Flag dropdown
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 18.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                ShellBackButton(onClick = onBackClick)
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(shellState.activeDestination.labelRes),
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
-                                        text = stringResource(R.string.shortcuts_hint),
-                                        style = MaterialTheme.typography.labelSmall,
+                                        text = stringResource(R.string.app_subtitle),
+                                        style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
+
+                                DesktopShortcutBar(
+                                    onShortcut = { shellViewModel.dispatchShortcut(it) }
+                                )
+
+                                LanguageFlagDropdown(
+                                    currentLanguage = shellState.currentLanguage,
+                                    expanded = shellState.showLanguageDialog,
+                                    onExpandedChange = { shellViewModel.setLanguageDialogVisible(it) },
+                                    onSelectLanguage = { shellViewModel.applyAppLanguage(it) }
+                                )
                             }
 
-                            LanguageFlagButton(
-                                language = shellState.currentLanguage,
-                                onClick = { shellViewModel.setLanguageDialogVisible(true) }
+                            ActiveFeatureWorkspace(
+                                destination = shellState.activeDestination,
+                                quickLaunchAction = shellState.quickLaunchRequest,
+                                onConsumedQuickLaunch = { shellViewModel.consumeQuickLaunch() },
+                                onNavigate = { shellViewModel.selectDestination(it) },
+                                onRegisterSubBackHandler = { subScreenBackHandler = it },
+                                shortcutEvents = shellViewModel.shortcutEvents,
+                                archiveViewModel = archiveViewModel,
+                                imageStudioViewModel = imageStudioViewModel,
+                                fileBrowserViewModel = fileBrowserViewModel,
+                                modifier = Modifier.weight(1f)
                             )
                         }
-
-                        ActiveFeatureWorkspace(
-                            destination = shellState.activeDestination,
-                            quickLaunchAction = shellState.quickLaunchRequest,
-                            onConsumedQuickLaunch = { shellViewModel.consumeQuickLaunch() },
-                            onNavigate = { shellViewModel.selectDestination(it) },
-                            onRegisterSubBackHandler = { subScreenBackHandler = it },
-                            archiveViewModel = archiveViewModel,
-                            imageStudioViewModel = imageStudioViewModel,
-                            fileBrowserViewModel = fileBrowserViewModel,
-                            modifier = Modifier.weight(1f)
-                        )
                     }
                 }
             }
         }
-    }
-
-    if (shellState.showLanguageDialog) {
-        LanguagePickerDialog(
-            currentLanguage = shellState.currentLanguage,
-            onSelectLanguage = { shellViewModel.applyAppLanguage(it) },
-            onDismiss = { shellViewModel.setLanguageDialogVisible(false) }
-        )
     }
 
     if (shellState.showUpdateDialog) {
@@ -404,6 +445,99 @@ fun ArcImageShell(
                 }
             },
             onDismiss = { shellViewModel.setUpdateDialogVisible(false) }
+        )
+    }
+}
+
+/**
+ * Interactive desktop shortcut bar (`[⌨️] Ctrl+O Open • Ctrl+A Select All • Del Remove • Esc Clear`):
+ * works both via hardware keyboard shortcuts AND by clicking any of the 4 action pills directly.
+ */
+@Composable
+private fun DesktopShortcutBar(
+    onShortcut: (ShortcutAction) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val rawHint = stringResource(R.string.shortcuts_hint)
+    val actions = listOf(
+        ShortcutAction.OPEN,
+        ShortcutAction.SELECT_ALL,
+        ShortcutAction.DELETE_SELECTED,
+        ShortcutAction.ESCAPE
+    )
+    val labels = remember(rawHint) { rawHint.split(" • ") }
+
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Keyboard,
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(start = 4.dp, end = 4.dp)
+                    .size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (labels.size == actions.size) {
+                labels.forEachIndexed { index, segmentLabel ->
+                    ShortcutSegmentButton(
+                        label = segmentLabel,
+                        onClick = { onShortcut(actions[index]) }
+                    )
+                    if (index < labels.lastIndex) {
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            } else {
+                ShortcutSegmentButton(
+                    label = rawHint,
+                    onClick = { onShortcut(ShortcutAction.OPEN) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShortcutSegmentButton(
+    label: String,
+    onClick: () -> Unit
+) {
+    val (hoverSource, isHovered) = rememberArcHoverState()
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = if (isHovered) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            Color.Transparent
+        },
+        modifier = Modifier
+            .arcHoverable(hoverSource)
+            .pointerHoverIcon(PointerIcon.Hand)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isHovered) {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
         )
     }
 }
@@ -435,36 +569,6 @@ fun ArcImageLogo(size: Dp, modifier: Modifier = Modifier) {
         contentDescription = null,
         modifier = modifier.size(size)
     )
-}
-
-/** Country-flag-only language trigger (replaces text language badges). */
-@Composable
-private fun LanguageFlagButton(
-    language: AppLanguage,
-    onClick: () -> Unit
-) {
-    val actionLangDesc = stringResource(R.string.action_language)
-    Surface(
-        onClick = onClick,
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        modifier = Modifier.semantics(mergeDescendants = true) {
-            contentDescription = actionLangDesc
-        }
-    ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            CountryFlagIcon(
-                language = language,
-                width = 30.dp,
-                height = 20.dp,
-                cornerRadius = 4.dp
-            )
-        }
-    }
 }
 
 @Composable
@@ -504,6 +608,7 @@ private fun ActiveFeatureWorkspace(
     onConsumedQuickLaunch: () -> Unit,
     onNavigate: (AppDestination) -> Unit,
     onRegisterSubBackHandler: (((() -> Boolean)?) -> Unit),
+    shortcutEvents: Flow<ShortcutAction>,
     archiveViewModel: ArchiveViewModel,
     imageStudioViewModel: ImageStudioViewModel,
     fileBrowserViewModel: FileBrowserViewModel,
@@ -547,6 +652,7 @@ private fun ActiveFeatureWorkspace(
                         }
                     }
                 },
+                shortcutEvents = shortcutEvents,
                 modifier = modifier
             )
         }
@@ -556,6 +662,7 @@ private fun ActiveFeatureWorkspace(
                 viewModel = archiveViewModel,
                 triggerOpenArchivePicker = quickLaunchAction == QuickLaunchAction.OPEN_ARCHIVE_PICKER,
                 onConsumedQuickLaunch = onConsumedQuickLaunch,
+                shortcutEvents = shortcutEvents,
                 modifier = modifier
             )
         }
@@ -566,6 +673,7 @@ private fun ActiveFeatureWorkspace(
                 triggerOpenImagePicker = quickLaunchAction == QuickLaunchAction.OPEN_IMAGE_PICKER,
                 onConsumedQuickLaunch = onConsumedQuickLaunch,
                 onRegisterSubBackHandler = onRegisterSubBackHandler,
+                shortcutEvents = shortcutEvents,
                 modifier = modifier
             )
         }

@@ -160,6 +160,9 @@
     <string name="action_open_archive">Open archive</string>
     <string name="action_open_folder">Open</string>
     <string name="action_select">Select</string>
+    <string name="files_action_delete">Delete</string>
+    <string name="files_delete_title">Delete selected items?</string>
+    <string name="files_delete_confirm">Permanently delete %1$d item(s) from your device?</string>
     <string name="files_drop_hint">Drop files here to open them</string>
 
     <!-- Navigation, Archive Info & Play-Protect-Safe Updates -->

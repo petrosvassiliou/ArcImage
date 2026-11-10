@@ -159,6 +159,9 @@
     <string name="action_open_archive">Abrir archivo comprimido</string>
     <string name="action_open_folder">Abrir</string>
     <string name="action_select">Seleccionar</string>
+    <string name="files_action_delete">Eliminar</string>
+    <string name="files_delete_title">¿Eliminar los elementos seleccionados?</string>
+    <string name="files_delete_confirm">¿Eliminar permanentemente %1$d elemento(s) del dispositivo?</string>
     <string name="files_drop_hint">Suelta archivos aquí para abrirlos</string>
 
     <!-- Navigation, Archive Info & Play-Protect-Safe Updates -->

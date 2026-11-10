@@ -159,6 +159,9 @@
     <string name="action_open_archive">Άνοιγμα αρχειοθήκης</string>
     <string name="action_open_folder">Άνοιγμα</string>
     <string name="action_select">Επιλογή</string>
+    <string name="files_action_delete">Διαγραφή</string>
+    <string name="files_delete_title">Διαγραφή επιλεγμένων στοιχείων;</string>
+    <string name="files_delete_confirm">Οριστική διαγραφή %1$d στοιχείου(-ων) από τη συσκευή σας;</string>
     <string name="files_drop_hint">Αποθέστε αρχεία εδώ για να ανοίξουν</string>
 
     <!-- Navigation, Archive Info & Play-Protect-Safe Updates -->

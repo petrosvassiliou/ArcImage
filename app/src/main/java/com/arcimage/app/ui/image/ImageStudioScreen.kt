@@ -116,12 +116,13 @@ import com.arcimage.app.ui.components.shareOutputUri
 import com.arcimage.app.ui.theme.ArcBrandGradient
 import com.arcimage.app.ui.util.arcFileDropTarget
 import com.arcimage.app.ui.util.arcHoverable
-import com.arcimage.app.ui.util.arcKeyboardShortcuts
 import com.arcimage.app.ui.util.arcPointerContextActions
 import com.arcimage.app.ui.util.rememberArcHoverState
 import com.arcimage.app.ui.viewmodel.ImageStudioUiState
 import com.arcimage.app.ui.viewmodel.ImageStudioViewModel
+import com.arcimage.app.ui.viewmodel.ShortcutAction
 import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 @Composable
@@ -130,6 +131,7 @@ fun ImageStudioScreen(
     triggerOpenImagePicker: Boolean,
     onConsumedQuickLaunch: () -> Unit,
     onRegisterSubBackHandler: (((() -> Boolean)?) -> Unit)? = null,
+    shortcutEvents: Flow<ShortcutAction>? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -196,15 +198,21 @@ fun ImageStudioScreen(
         }
     }
 
+    LaunchedEffect(shortcutEvents) {
+        shortcutEvents?.collect { action ->
+            when (action) {
+                ShortcutAction.OPEN -> openImageDocsLauncher.launch(arrayOf("image/*"))
+                ShortcutAction.SELECT_ALL -> viewModel.selectAll()
+                ShortcutAction.DELETE_SELECTED -> viewModel.removeSelected()
+                ShortcutAction.ESCAPE -> viewModel.clearSelection()
+                ShortcutAction.NAVIGATE_UP -> Unit
+            }
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .arcKeyboardShortcuts(
-                onSelectAll = { viewModel.selectAll() },
-                onOpenPicker = { openImageDocsLauncher.launch(arrayOf("image/*")) },
-                onDeleteSelected = { viewModel.removeSelected() },
-                onEscape = { viewModel.clearSelection() }
-            )
             .arcFileDropTarget(
                 onHoverChanged = { isDragHovering = it },
                 onUrisDropped = { uris -> viewModel.addImages(uris) }

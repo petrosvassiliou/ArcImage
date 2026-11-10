@@ -18,8 +18,11 @@ import com.arcimage.app.model.AppDestination
 import com.arcimage.app.model.AppLanguage
 import com.arcimage.app.model.LocaleController
 import com.arcimage.app.model.ThemePreference
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,6 +45,14 @@ data class ShellUiState(
 enum class QuickLaunchAction {
     OPEN_ARCHIVE_PICKER,
     OPEN_IMAGE_PICKER
+}
+
+enum class ShortcutAction {
+    OPEN,
+    SELECT_ALL,
+    DELETE_SELECTED,
+    ESCAPE,
+    NAVIGATE_UP
 }
 
 class MainShellViewModel(
@@ -86,6 +97,16 @@ class MainShellViewModel(
         )
     )
     val uiState: StateFlow<ShellUiState> = _uiState.asStateFlow()
+
+    private val _shortcutEvents = MutableSharedFlow<ShortcutAction>(extraBufferCapacity = 8)
+    val shortcutEvents: SharedFlow<ShortcutAction> = _shortcutEvents.asSharedFlow()
+
+    fun dispatchShortcut(action: ShortcutAction) {
+        if (action == ShortcutAction.ESCAPE) {
+            _uiState.update { it.copy(showLanguageDialog = false) }
+        }
+        _shortcutEvents.tryEmit(action)
+    }
 
     init {
         (appUpdateRepository as? AppUpdateRepositoryImpl)?.onPlayUpdateDownloaded = {

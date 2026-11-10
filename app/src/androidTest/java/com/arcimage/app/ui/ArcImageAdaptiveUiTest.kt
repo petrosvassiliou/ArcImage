@@ -1,6 +1,9 @@
 package com.arcimage.app.ui
 
+import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
+import android.view.KeyEvent
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -16,13 +19,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.arcimage.app.MainActivity
 import com.arcimage.app.R
+import java.io.File
+import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.Locale
 
 @RunWith(AndroidJUnit4::class)
 class ArcImageAdaptiveUiTest {
@@ -87,14 +91,14 @@ class ArcImageAdaptiveUiTest {
     }
 
     @Test
-    fun inAppLanguagePickerDisplaysSixCountryFlagsAndSwitchesToGreekRuntimeLocale() {
+    fun inAppLanguageDropdownDisplaysSixCountryFlagsAndSwitchesToGreekRuntimeLocale() {
         val context = composeRule.activity
         val langDescription = context.getString(R.string.action_language)
 
-        // Open Country-Flag Language Picker modal
+        // Open Country-Flag Language DropdownMenu
         composeRule.onAllNodesWithContentDescription(langDescription).onFirst().performClick()
 
-        // Verify all 6 country flag cards appear (with accessibility content descriptions, no text labels)
+        // Verify all 6 country flag items appear in the dropdown menu (with accessibility content descriptions)
         composeRule.onNodeWithContentDescription("English").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Deutsch").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Italiano").assertIsDisplayed()
@@ -102,12 +106,69 @@ class ArcImageAdaptiveUiTest {
         composeRule.onNodeWithContentDescription("Español").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Ελληνικά").assertIsDisplayed()
 
-        // Switch runtime language to Greek via the Greek flag tile
+        // Switch runtime language to Greek via the Greek flag dropdown item
         composeRule.onNodeWithContentDescription("Ελληνικά").performClick()
         composeRule.waitForIdle()
 
         assertEquals("el", AppCompatDelegate.getApplicationLocales().toLanguageTags())
         composeRule.onAllNodesWithText("Στούντιο Εικόνας").onFirst().assertIsDisplayed()
+    }
+
+    @Test
+    fun hardwareKeyboardShortcutsWorkWithoutManualFocus() {
+        val activity = composeRule.activity
+        val tempFile = File(activity.cacheDir, "shortcut_verify.txt").apply {
+            writeText("keyboard shortcut verification")
+        }
+
+        // Route a real file into Archive Manager without touching or focusing any list element
+        composeRule.runOnUiThread {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, Uri.fromFile(tempFile))
+            }
+            InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(activity, shareIntent)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithText("shortcut_verify.txt").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("shortcut_verify.txt").assertIsDisplayed()
+
+        // Press Ctrl+A (Select All) directly on the Activity without focusing any Compose node first
+        composeRule.runOnUiThread {
+            activity.dispatchKeyEvent(
+                KeyEvent(0L, 0L, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A, 0, KeyEvent.META_CTRL_ON)
+            )
+            activity.dispatchKeyEvent(
+                KeyEvent(0L, 0L, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_A, 0, KeyEvent.META_CTRL_ON)
+            )
+        }
+        composeRule.waitForIdle()
+        val selectedLabel = activity.getString(R.string.selected_count_format, 1)
+        composeRule.onNodeWithText(selectedLabel).assertIsDisplayed()
+
+        // Press Esc (Clear Selection) -> selection pill disappears, item remains
+        composeRule.runOnUiThread {
+            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE))
+            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE))
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("shortcut_verify.txt").assertIsDisplayed()
+
+        // Press Ctrl+A then Delete/Entf (KEYCODE_FORWARD_DEL) -> removes item and shows empty state
+        composeRule.runOnUiThread {
+            activity.dispatchKeyEvent(
+                KeyEvent(0L, 0L, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_A, 0, KeyEvent.META_CTRL_ON)
+            )
+        }
+        composeRule.waitForIdle()
+        composeRule.runOnUiThread {
+            activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_FORWARD_DEL))
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(activity.getString(R.string.archive_empty_compress_title)).assertIsDisplayed()
+
+        tempFile.delete()
     }
 
     @Test

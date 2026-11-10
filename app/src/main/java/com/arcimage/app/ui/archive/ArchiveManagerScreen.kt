@@ -63,8 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -98,17 +96,19 @@ import com.arcimage.app.ui.components.StatusBannerCard
 import com.arcimage.app.ui.theme.ArcBrandGradient
 import com.arcimage.app.ui.util.arcFileDropTarget
 import com.arcimage.app.ui.util.arcHoverable
-import com.arcimage.app.ui.util.arcKeyboardShortcuts
 import com.arcimage.app.ui.util.arcPointerContextActions
 import com.arcimage.app.ui.util.rememberArcHoverState
 import com.arcimage.app.ui.viewmodel.ArchiveUiState
 import com.arcimage.app.ui.viewmodel.ArchiveViewModel
+import com.arcimage.app.ui.viewmodel.ShortcutAction
+import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun ArchiveManagerScreen(
     viewModel: ArchiveViewModel,
     triggerOpenArchivePicker: Boolean,
     onConsumedQuickLaunch: () -> Unit,
+    shortcutEvents: Flow<ShortcutAction>? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -116,7 +116,6 @@ fun ArchiveManagerScreen(
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val isCompactWidth =
         adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT
-    val focusRequester = remember { FocusRequester() }
     var isDragHovering by rememberSaveable { mutableStateOf(false) }
 
     // File & Folder Pickers
@@ -186,22 +185,40 @@ fun ArchiveManagerScreen(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .focusRequester(focusRequester)
-            .arcKeyboardShortcuts(
-                onSelectAll = { viewModel.selectAllInCurrentMode() },
-                onOpenPicker = {
-                    if (uiState.mode == ArchiveWorkspaceMode.COMPRESS) {
+    // Handle global hardware keyboard shortcuts & interactive header shortcut bar
+    LaunchedEffect(shortcutEvents) {
+        shortcutEvents?.collect { action ->
+            val current = viewModel.uiState.value
+            when (action) {
+                ShortcutAction.OPEN -> {
+                    if (current.mode == ArchiveWorkspaceMode.COMPRESS) {
                         addFilesLauncher.launch(arrayOf("*/*"))
                     } else {
                         openArchiveLauncher.launch(arrayOf("*/*"))
                     }
-                },
-                onDeleteSelected = { viewModel.deleteSelectedItems() },
-                onEscape = { viewModel.clearSelectionAndModals() }
-            )
+                }
+                ShortcutAction.SELECT_ALL -> viewModel.selectAllInCurrentMode()
+                ShortcutAction.DELETE_SELECTED -> viewModel.deleteSelectedItems()
+                ShortcutAction.ESCAPE -> {
+                    if (current.selectedSourceIds.isEmpty() &&
+                        current.selectedEntryPaths.isEmpty() &&
+                        !current.showCompressionDialog &&
+                        current.passwordPrompt == null &&
+                        current.searchQuery.isNotEmpty()
+                    ) {
+                        viewModel.setSearchQuery("")
+                    } else {
+                        viewModel.clearSelectionAndModals()
+                    }
+                }
+                ShortcutAction.NAVIGATE_UP -> Unit
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
             .arcFileDropTarget(
                 onHoverChanged = { isDragHovering = it },
                 onUrisDropped = { uris -> viewModel.handleDroppedOrSharedArchiveUris(uris) }

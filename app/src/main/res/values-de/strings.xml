@@ -159,6 +159,9 @@
     <string name="action_open_archive">Archiv öffnen</string>
     <string name="action_open_folder">Öffnen</string>
     <string name="action_select">Auswählen</string>
+    <string name="files_action_delete">Löschen</string>
+    <string name="files_delete_title">Ausgewählte Elemente löschen?</string>
+    <string name="files_delete_confirm">%1$d Element(e) dauerhaft vom Gerät löschen?</string>
     <string name="files_drop_hint">Dateien hier ablegen, um sie zu öffnen</string>
 
     <!-- Navigation, Archive Info & Play-Protect-Safe Updates -->
