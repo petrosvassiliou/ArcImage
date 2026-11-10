@@ -14,8 +14,8 @@ android {
         minSdk = 28
         targetSdk = 36
         // CI overrides these via -PversionCode / -PversionName (e.g. from a v1.2.3 tag)
-        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 2
-        versionName = (project.findProperty("versionName") as String?) ?: "1.1.0"
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 10101
+        versionName = (project.findProperty("versionName") as String?) ?: "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -41,7 +41,7 @@ android {
                 storePassword = signingValue("ARCIMAGE_KEYSTORE_PASSWORD")
                 keyAlias = signingValue("ARCIMAGE_KEY_ALIAS")
                 keyPassword = signingValue("ARCIMAGE_KEY_PASSWORD")
-                enableV1Signing = false
+                enableV1Signing = true
                 enableV2Signing = true
                 enableV3Signing = true
             }

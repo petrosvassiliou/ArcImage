@@ -113,17 +113,34 @@ jobs:
         with:
           gradle-version: '8.12'
 
-      - name: Assemble Debug, Release & AndroidTest APKs (Universal + arm64-v8a + x86_64)
+      - name: Restore upload keystore from secrets (if available)
+        env:
+          KEYSTORE_B64: ${{ secrets.ARCIMAGE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/arcimage-upload.jks"
+            echo "ARCIMAGE_KEYSTORE_PATH=$RUNNER_TEMP/arcimage-upload.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Assemble Signed Release, Debug & AndroidTest APKs (Universal + arm64-v8a + x86_64)
+        env:
+          ARCIMAGE_KEYSTORE_PASSWORD: ${{ secrets.ARCIMAGE_KEYSTORE_PASSWORD }}
+          ARCIMAGE_KEY_ALIAS: ${{ secrets.ARCIMAGE_KEY_ALIAS }}
+          ARCIMAGE_KEY_PASSWORD: ${{ secrets.ARCIMAGE_KEY_PASSWORD }}
         run: gradle assembleDebug assembleRelease assembleDebugAndroidTest --stacktrace
 
-      - name: Upload ArcImage APKs (Googlebook OS x86_64, ARM64 & Universal)
+      - name: Upload Installable ArcImage APKs (Signed Release & Debug, excluding unsigned/test)
         uses: actions/upload-artifact@v4
         with:
           name: arcimage-apks
           path: |
-            app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/androidTest/debug/*.apk
+            !app/build/outputs/apk/release/*unsigned*.apk
+            app/build/outputs/apk/debug/*.apk
+
+      - name: Remove keystore from runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/arcimage-upload.jks"
 
   # ---------------------------------------------------------------------------
   # 3. Compose UI & Image Encoder Instrumented Tests (x86_64 KVM Emulator)
@@ -163,7 +180,20 @@ jobs:
         with:
           gradle-version: '8.12'
 
-      - name: Run Instrumented Tests on x86_64 Emulator
+      - name: Restore upload keystore from secrets (if available)
+        env:
+          KEYSTORE_B64: ${{ secrets.ARCIMAGE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/arcimage-upload.jks"
+            echo "ARCIMAGE_KEYSTORE_PATH=$RUNNER_TEMP/arcimage-upload.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Run Instrumented Tests & Verify Signed Release APK Install on Emulator
+        env:
+          ARCIMAGE_KEYSTORE_PASSWORD: ${{ secrets.ARCIMAGE_KEYSTORE_PASSWORD }}
+          ARCIMAGE_KEY_ALIAS: ${{ secrets.ARCIMAGE_KEY_ALIAS }}
+          ARCIMAGE_KEY_PASSWORD: ${{ secrets.ARCIMAGE_KEY_PASSWORD }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -171,7 +201,17 @@ jobs:
           arch: x86_64
           profile: pixel_tablet
           disable-animations: true
-          script: gradle connectedDebugAndroidTest --stacktrace
+          script: |
+            gradle connectedDebugAndroidTest assembleRelease --stacktrace
+            adb uninstall com.arcimage.app || true
+            adb install app/build/outputs/apk/release/app-universal-release.apk
+            adb shell am start -W -n com.arcimage.app/.MainActivity
+            sleep 3
+            adb shell pidof com.arcimage.app
+
+      - name: Remove keystore from runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/arcimage-upload.jks"
 
       - name: Upload Instrumented Test Reports
         if: always()
