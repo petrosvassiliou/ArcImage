@@ -63,7 +63,7 @@
     <string name="compression_level_normal">Κανονική</string>
     <string name="compression_level_maximum">Μέγιστη</string>
     <string name="archive_password_label">Προστασία με κωδικό (Προαιρετικό)</string>
-    <string name="archive_password_supporting">Κρυπτογράφηση AES-256 για αρχεία ZIP &amp; 7Z</string>
+    <string name="archive_password_supporting">Κρυπτογράφηση AES-256 για αρχεία ZIP</string>
     <string name="archive_password_show">Εμφάνιση κωδικού</string>
     <string name="archive_password_hide">Απόκρυψη κωδικού</string>
     <string name="archive_start_compression">Συμπίεση τώρα</string>

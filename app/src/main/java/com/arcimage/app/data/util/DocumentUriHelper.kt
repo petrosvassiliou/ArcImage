@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import com.arcimage.app.data.files.DeviceFileRepository
@@ -13,6 +14,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.Locale
 import java.util.UUID
 
 data class ResolvedInputEntry(
@@ -23,6 +25,16 @@ data class ResolvedInputEntry(
 )
 
 object DocumentUriHelper {
+
+    fun safeUriForFile(context: Context, file: File): Uri {
+        return runCatching {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+        }.getOrElse { Uri.fromFile(file) }
+    }
 
     fun resolveDisplayName(context: Context, uri: Uri): String {
         if (uri.scheme == "file") {
@@ -73,7 +85,39 @@ object DocumentUriHelper {
     }
 
     fun resolveMimeType(context: Context, uri: Uri): String? {
-        return context.contentResolver.getType(uri)
+        val resolverType = runCatching { context.contentResolver.getType(uri) }.getOrNull()
+        if (!resolverType.isNullOrBlank() && resolverType != "application/octet-stream") {
+            return resolverType
+        }
+        val name = resolveDisplayName(context, uri)
+        return guessMimeTypeFromFileName(name) ?: resolverType
+    }
+
+    fun guessMimeTypeFromFileName(fileName: String): String? {
+        val lower = fileName.lowercase(Locale.ROOT)
+        return when {
+            lower.endsWith(".tar.gz") || lower.endsWith(".tgz") || lower.endsWith(".gz") -> "application/gzip"
+            lower.endsWith(".tar.bz2") || lower.endsWith(".tbz2") || lower.endsWith(".bz2") -> "application/x-bzip2"
+            lower.endsWith(".tar.xz") || lower.endsWith(".txz") || lower.endsWith(".xz") -> "application/x-xz"
+            lower.endsWith(".tar") -> "application/x-tar"
+            lower.endsWith(".7z") -> "application/x-7z-compressed"
+            lower.endsWith(".rar") || lower.endsWith(".cbr") -> "application/vnd.rar"
+            lower.endsWith(".zip") -> "application/zip"
+            lower.endsWith(".webp") -> "image/webp"
+            lower.endsWith(".heic") || lower.endsWith(".heif") -> "image/heic"
+            lower.endsWith(".jpg") || lower.endsWith(".jpeg") -> "image/jpeg"
+            lower.endsWith(".png") -> "image/png"
+            lower.endsWith(".gif") -> "image/gif"
+            lower.endsWith(".bmp") -> "image/bmp"
+            else -> {
+                val ext = lower.substringAfterLast('.', "")
+                if (ext.isNotEmpty()) {
+                    MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+                } else {
+                    null
+                }
+            }
+        }
     }
 
     fun isDirectoryUri(context: Context, uri: Uri): Boolean {
@@ -81,7 +125,7 @@ object DocumentUriHelper {
             return File(uri.path ?: return false).isDirectory
         }
         if (isTreeUriSafe(uri)) return true
-        val mime = resolveMimeType(context, uri)
+        val mime = runCatching { context.contentResolver.getType(uri) }.getOrNull()
         if (mime == DocumentsContract.Document.MIME_TYPE_DIR) return true
         val singleDoc = DocumentFile.fromSingleUri(context, uri)
         return singleDoc?.isDirectory == true
@@ -218,11 +262,7 @@ object DocumentUriHelper {
                     if (localSourceFile.absolutePath != targetFile.absolutePath) {
                         localSourceFile.copyTo(targetFile, overwrite = true)
                     }
-                    val contentUri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.fileprovider",
-                        targetFile
-                    )
+                    val contentUri = safeUriForFile(context, targetFile)
                     return contentUri to targetFile.name
                 }
             } else {
@@ -247,11 +287,7 @@ object DocumentUriHelper {
         if (localSourceFile.absolutePath != targetFile.absolutePath) {
             localSourceFile.copyTo(targetFile, overwrite = true)
         }
-        val contentUri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            targetFile
-        )
+        val contentUri = safeUriForFile(context, targetFile)
         return contentUri to targetFile.name
     }
 
@@ -301,11 +337,7 @@ object DocumentUriHelper {
                 val targetDir = File(destinationTreeUri.path ?: "")
                 if ((targetDir.isDirectory || targetDir.mkdirs()) && targetDir.canWrite()) {
                     val outFile = uniqueFile(targetDir, fileName)
-                    val uri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.fileprovider",
-                        outFile
-                    )
+                    val uri = safeUriForFile(context, outFile)
                     return Triple(FileOutputStream(outFile), uri, outFile)
                 }
             } else {
@@ -324,11 +356,7 @@ object DocumentUriHelper {
         }
         val exportDir = getDefaultExportsDir(context)
         val outFile = uniqueFile(exportDir, fileName)
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            outFile
-        )
+        val uri = safeUriForFile(context, outFile)
         return Triple(FileOutputStream(outFile), uri, outFile)
     }
 
@@ -346,7 +374,8 @@ object DocumentUriHelper {
                 copyLocalFolderRecursiveToDoc(context, child, subDoc)
             } else {
                 targetDocDir.findFile(child.name)?.delete()
-                val created = targetDocDir.createFile("application/octet-stream", child.name) ?: continue
+                val mime = guessMimeTypeFromFileName(child.name) ?: "application/octet-stream"
+                val created = targetDocDir.createFile(mime, child.name) ?: continue
                 context.contentResolver.openOutputStream(created.uri)?.use { out ->
                     child.inputStream().use { input -> input.copyTo(out) }
                 }

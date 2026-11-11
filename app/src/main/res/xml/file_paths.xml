@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<paths>
+<paths xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="SecureFileProviderPaths">
     <cache-path
         name="arcimage_cache"
         path="exports/" />
@@ -12,5 +13,9 @@
     <!-- Public device storage (e.g. Download/ArcImage results) when all-files access is granted -->
     <external-path
         name="device_storage"
+        path="." />
+    <!-- Removable SD card / USB storage mounts (/storage/XXXX-XXXX/...) -->
+    <root-path
+        name="removable_storage"
         path="." />
 </paths>

@@ -48,6 +48,7 @@ class ImageStudioViewModel(
         private const val KEY_BATCH_ITEMS = "image_studio_batch_items"
         private const val KEY_CONFIG = "image_studio_config"
         private const val KEY_DEST_URI = "image_studio_dest_uri"
+        private const val KEY_DEST_LABEL = "image_studio_dest_label"
     }
 
     private var batchJob: Job? = null
@@ -59,12 +60,14 @@ class ImageStudioViewModel(
         val items = savedStateHandle.get<ArrayList<ImageBatchItem>>(KEY_BATCH_ITEMS) ?: emptyList()
         val config = savedStateHandle.get<ImageProcessConfig>(KEY_CONFIG) ?: ImageProcessConfig()
         val destUri = savedStateHandle.get<Uri>(KEY_DEST_URI)
+        val destLabel = savedStateHandle.get<String>(KEY_DEST_LABEL)
         return ImageStudioUiState(
             batchItems = items,
             focusedItemId = items.firstOrNull()?.id,
             config = config,
             estimatedTotalOutputBytes = imageRepository.estimateBatchOutputSize(items, config),
-            destinationTreeUri = destUri
+            destinationTreeUri = destUri,
+            destinationLabel = destLabel
         )
     }
 
@@ -72,6 +75,7 @@ class ImageStudioViewModel(
         savedStateHandle[KEY_BATCH_ITEMS] = ArrayList(state.batchItems)
         savedStateHandle[KEY_CONFIG] = state.config
         savedStateHandle[KEY_DEST_URI] = state.destinationTreeUri
+        savedStateHandle[KEY_DEST_LABEL] = state.destinationLabel
     }
 
     fun estimateItemBytes(item: ImageBatchItem): Long {

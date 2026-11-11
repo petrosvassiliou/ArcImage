@@ -63,7 +63,7 @@
     <string name="compression_level_normal">Normal</string>
     <string name="compression_level_maximum">Maximum</string>
     <string name="archive_password_label">Protection par mot de passe (Optionnel)</string>
-    <string name="archive_password_supporting">Chiffrement AES-256 pour les archives ZIP et 7Z</string>
+    <string name="archive_password_supporting">Chiffrement AES-256 pour les archives ZIP</string>
     <string name="archive_password_show">Afficher le mot de passe</string>
     <string name="archive_password_hide">Masquer le mot de passe</string>
     <string name="archive_start_compression">Compresser maintenant</string>

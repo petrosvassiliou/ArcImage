@@ -60,6 +60,7 @@ import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SdCard
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material3.AlertDialog
@@ -114,6 +115,8 @@ import com.arcimage.app.data.files.FileSortOrder
 import com.arcimage.app.data.files.QuickFolder
 import com.arcimage.app.model.FileSizeFormatter
 import com.arcimage.app.ui.components.DropZoneOverlay
+import com.arcimage.app.ui.components.openFileWithSystemApp
+import com.arcimage.app.ui.components.shareOutputUri
 import com.arcimage.app.ui.theme.ArcBrandGradient
 import com.arcimage.app.ui.util.arcFileDropTarget
 import com.arcimage.app.ui.util.arcHoverable
@@ -220,7 +223,11 @@ fun FileBrowserScreen(
             FileKind.FOLDER -> viewModel.openDirectory(entry.path)
             FileKind.ARCHIVE -> onOpenArchive(Uri.fromFile(File(entry.path)))
             FileKind.IMAGE -> onOpenImages(listOf(Uri.fromFile(File(entry.path))))
-            FileKind.OTHER -> viewModel.toggleSelection(entry.path)
+            FileKind.OTHER -> {
+                if (!openFileWithSystemApp(context, File(entry.path))) {
+                    viewModel.toggleSelection(entry.path)
+                }
+            }
         }
     }
     val onEntryClick: (DeviceFileEntry) -> Unit = { entry ->
@@ -808,6 +815,25 @@ private fun FileGridCard(
                                 .padding(6.dp)
                                 .background(MaterialTheme.colorScheme.surface, CircleShape)
                         )
+                    } else {
+                        IconButton(
+                            onClick = { menuOpen = true },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(2.dp)
+                                .size(30.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+                                    CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.MoreVert,
+                                contentDescription = stringResource(R.string.action_inspect),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
                 Text(
@@ -849,27 +875,26 @@ private fun EntryContextMenu(
     onCompress: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val context = LocalContext.current
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        if (entry.kind != FileKind.OTHER) {
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        stringResource(
-                            when (entry.kind) {
-                                FileKind.ARCHIVE -> R.string.action_open_archive
-                                FileKind.IMAGE -> R.string.action_open_in_studio
-                                else -> R.string.action_open_folder
-                            }
-                        )
+        DropdownMenuItem(
+            text = {
+                Text(
+                    stringResource(
+                        when (entry.kind) {
+                            FileKind.ARCHIVE -> R.string.action_open_archive
+                            FileKind.IMAGE -> R.string.action_open_in_studio
+                            else -> R.string.action_open_folder
+                        }
                     )
-                },
-                leadingIcon = { Icon(kindIcon(entry.kind), contentDescription = null) },
-                onClick = {
-                    onDismiss()
-                    onOpen()
-                }
-            )
-        }
+                )
+            },
+            leadingIcon = { Icon(kindIcon(entry.kind), contentDescription = null) },
+            onClick = {
+                onDismiss()
+                onOpen()
+            }
+        )
         DropdownMenuItem(
             text = { Text(stringResource(if (selected) R.string.action_clear_selection else R.string.action_select)) },
             leadingIcon = { Icon(Icons.Rounded.CheckCircle, contentDescription = null) },
@@ -886,6 +911,16 @@ private fun EntryContextMenu(
                 onCompress()
             }
         )
+        if (!entry.isDirectory) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_share)) },
+                leadingIcon = { Icon(Icons.Rounded.Share, contentDescription = null) },
+                onClick = {
+                    onDismiss()
+                    shareOutputUri(context, Uri.fromFile(File(entry.path)))
+                }
+            )
+        }
         DropdownMenuItem(
             text = {
                 Text(

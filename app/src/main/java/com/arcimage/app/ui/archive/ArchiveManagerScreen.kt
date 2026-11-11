@@ -1,6 +1,7 @@
 package com.arcimage.app.ui.archive
 
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -25,6 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.SelectAll
@@ -117,6 +119,7 @@ fun ArchiveManagerScreen(
     val isCompactWidth =
         adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT
     var isDragHovering by rememberSaveable { mutableStateOf(false) }
+    var showDestinationPickerDialog by rememberSaveable { mutableStateOf(false) }
 
     // File & Folder Pickers
     val addFilesLauncher = rememberLauncherForActivityResult(
@@ -176,6 +179,17 @@ fun ArchiveManagerScreen(
         }
     }
 
+    val requestDestinationPicker: () -> Unit = {
+        val canBrowseDevice = runCatching {
+            DeviceFileRepository.hasAllFilesAccess(context)
+        }.getOrDefault(false)
+        if (canBrowseDevice) {
+            showDestinationPickerDialog = true
+        } else {
+            destinationTreeLauncher.launch(null)
+        }
+    }
+
     // Handle Glance Desktop Widget quick-launch trigger
     LaunchedEffect(triggerOpenArchivePicker) {
         if (triggerOpenArchivePicker) {
@@ -232,7 +246,7 @@ fun ArchiveManagerScreen(
                 onAddFiles = { addFilesLauncher.launch(arrayOf("*/*")) },
                 onAddFolder = { addFolderLauncher.launch(null) },
                 onOpenArchive = { openArchiveLauncher.launch(arrayOf("*/*")) },
-                onChooseDestination = { destinationTreeLauncher.launch(null) },
+                onChooseDestination = requestDestinationPicker,
                 onSearchQueryChange = { viewModel.setSearchQuery(it) },
                 onSelectAll = { viewModel.selectAllInCurrentMode() },
                 onClearSelection = { viewModel.clearSelectionAndModals() },
@@ -243,10 +257,7 @@ fun ArchiveManagerScreen(
                 onToggleEntry = { viewModel.toggleEntrySelection(it) },
                 onInspectEntry = { viewModel.focusArchiveEntry(it) },
                 onExtractSingleEntry = { path ->
-                    if (path !in uiState.selectedEntryPaths) {
-                        viewModel.toggleEntrySelection(path)
-                    }
-                    viewModel.startExtraction(extractOnlySelected = true)
+                    viewModel.extractSpecificEntries(setOf(path))
                 },
                 onOpenCompressDialog = { viewModel.setCompressionDialogVisible(true) },
                 onExtractAll = { viewModel.startExtraction(extractOnlySelected = false) },
@@ -269,12 +280,9 @@ fun ArchiveManagerScreen(
                     onAddFiles = { addFilesLauncher.launch(arrayOf("*/*")) },
                     onAddFolder = { addFolderLauncher.launch(null) },
                     onOpenArchive = { openArchiveLauncher.launch(arrayOf("*/*")) },
-                    onChooseDestination = { destinationTreeLauncher.launch(null) },
+                    onChooseDestination = requestDestinationPicker,
                     onExtractFocused = { path ->
-                        if (path !in uiState.selectedEntryPaths) {
-                            viewModel.toggleEntrySelection(path)
-                        }
-                        viewModel.startExtraction(extractOnlySelected = true)
+                        viewModel.extractSpecificEntries(setOf(path))
                     },
                     modifier = Modifier
                         .width(320.dp)
@@ -296,10 +304,7 @@ fun ArchiveManagerScreen(
                     onToggleEntry = { viewModel.toggleEntrySelection(it) },
                     onInspectEntry = { viewModel.focusArchiveEntry(it) },
                     onExtractSingleEntry = { path ->
-                        if (path !in uiState.selectedEntryPaths) {
-                            viewModel.toggleEntrySelection(path)
-                        }
-                        viewModel.startExtraction(extractOnlySelected = true)
+                        viewModel.extractSpecificEntries(setOf(path))
                     },
                     onOpenCompressDialog = { viewModel.setCompressionDialogVisible(true) },
                     onExtractAll = { viewModel.startExtraction(extractOnlySelected = false) },
@@ -313,6 +318,23 @@ fun ArchiveManagerScreen(
         }
 
         DropZoneOverlay(visible = isDragHovering)
+    }
+
+    if (showDestinationPickerDialog) {
+        DeviceFolderPickerDialog(
+            initialDir = resolveInitialDestinationFolder(uiState.destinationTreeUri),
+            onSelectDirectory = { dir ->
+                val uri = Uri.fromFile(dir)
+                val label = dir.name.ifBlank { dir.absolutePath }
+                viewModel.setDestinationTree(uri, label)
+                showDestinationPickerDialog = false
+            },
+            onOpenSystemPicker = {
+                showDestinationPickerDialog = false
+                destinationTreeLauncher.launch(null)
+            },
+            onDismiss = { showDestinationPickerDialog = false }
+        )
     }
 
     // Compression Dialog: asks for Destination Folder, Archive Name, and Archive Type
@@ -554,21 +576,24 @@ private fun CompressedFileInfoCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (!entry.isDirectory) {
-                        FilledTonalButton(
-                            onClick = { onExtractFocused(entry.path) },
-                            shape = CircleShape,
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Rounded.Unarchive, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(stringResource(R.string.widget_action_extract))
-                        }
+                    FilledTonalButton(
+                        onClick = { onExtractFocused(entry.path) },
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Rounded.Unarchive, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.widget_action_extract))
                     }
                 }
             } else if (uiState.mode == ArchiveWorkspaceMode.COMPRESS && uiState.sourceItems.isNotEmpty()) {
-                val totalSourceBytes = uiState.sourceItems.sumOf { it.sizeBytes }
+                val activeSources = if (uiState.selectedSourceIds.isNotEmpty()) {
+                    uiState.sourceItems.filter { it.id in uiState.selectedSourceIds }
+                } else {
+                    uiState.sourceItems
+                }
+                val totalSourceBytes = activeSources.sumOf { it.sizeBytes }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -807,9 +832,14 @@ private fun ArchiveMainContentsArea(
                         .align(Alignment.BottomCenter)
                         .padding(14.dp)
                 ) {
-                    val totalSize = uiState.sourceItems.sumOf { it.sizeBytes }
+                    val activeSources = if (uiState.selectedSourceIds.isNotEmpty()) {
+                        uiState.sourceItems.filter { it.id in uiState.selectedSourceIds }
+                    } else {
+                        uiState.sourceItems
+                    }
+                    val totalSize = activeSources.sumOf { it.sizeBytes }
                     Text(
-                        text = "${uiState.sourceItems.size} • ${FileSizeFormatter.formatBytes(totalSize)}",
+                        text = "${activeSources.size} • ${FileSizeFormatter.formatBytes(totalSize)}",
                         style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier.weight(1f)
                     )
@@ -1086,6 +1116,20 @@ private fun SourceItemRow(
                     }
                 )
                 DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (isSelected) R.string.action_clear_selection else R.string.action_select
+                            )
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Outlined.CheckCircle, contentDescription = null) },
+                    onClick = {
+                        menuOffset = null
+                        onToggleSelect()
+                    }
+                )
+                DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_select_all)) },
                     leadingIcon = { Icon(Icons.Outlined.SelectAll, contentDescription = null) },
                     onClick = {
@@ -1204,6 +1248,20 @@ private fun ArchiveEntryRow(
                     onClick = {
                         menuOffset = null
                         onExtractEntry()
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (isSelected) R.string.action_clear_selection else R.string.action_select
+                            )
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Outlined.CheckCircle, contentDescription = null) },
+                    onClick = {
+                        menuOffset = null
+                        onToggleSelect()
                     }
                 )
                 DropdownMenuItem(

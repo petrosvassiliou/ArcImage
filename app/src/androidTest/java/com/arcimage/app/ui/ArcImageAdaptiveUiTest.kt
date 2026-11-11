@@ -6,6 +6,8 @@ import android.net.Uri
 import android.view.KeyEvent
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -14,6 +16,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import androidx.core.os.LocaleListCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -215,4 +219,56 @@ class ArcImageAdaptiveUiTest {
             assertTrue(localizedCtx.getString(R.string.widget_action_extract).isNotBlank())
         }
     }
+
+    @Test
+    fun themeMenuAndImageStudioSettingsControlsWorkEndToEnd() {
+        val context = composeRule.activity
+        val themeDesc = context.getString(R.string.action_theme)
+
+        // 1. Verify Theme dropdown menu items (System Default, Light, Dark, Dynamic Color, Check for updates)
+        composeRule.onAllNodesWithContentDescription(themeDesc).onFirst().performClick()
+        composeRule.onNodeWithText(context.getString(R.string.theme_system)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.theme_light)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.theme_dark)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.dynamic_color_label)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.update_check_now)).assertIsDisplayed()
+
+        // Select Dark theme, then restore System Default
+        composeRule.onNodeWithText(context.getString(R.string.theme_dark)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithContentDescription(themeDesc).onFirst().performClick()
+        composeRule.onNodeWithText(context.getString(R.string.theme_system)).performClick()
+        composeRule.waitForIdle()
+
+        // 2. Navigate to Image Studio and open Transformation Settings (if on compact phone screen)
+        val imageStudioLabel = context.getString(R.string.nav_image_studio)
+        composeRule.onAllNodesWithText(imageStudioLabel).onFirst().performClick()
+        composeRule.waitForIdle()
+
+        val settingsTitle = context.getString(R.string.image_settings_title)
+        val resizeModeHeader = context.getString(R.string.image_resize_mode_label)
+        if (composeRule.onAllNodesWithText(resizeModeHeader).fetchSemanticsNodes().isEmpty()) {
+            composeRule.onAllNodesWithText(settingsTitle).onFirst().performClick()
+            composeRule.waitForIdle()
+        }
+
+        // 3. Switch Resize Mode to Custom %, clear field completely, and type new value "125"
+        val customPctChip = context.getString(R.string.resize_mode_custom_pct)
+        composeRule.onNodeWithText(customPctChip).performScrollTo().performClick()
+        composeRule.waitForIdle()
+
+        val customPctField = composeRule.onAllNodes(hasSetTextAction()).onFirst()
+        customPctField.performScrollTo().performTextClearance()
+        composeRule.waitForIdle()
+        customPctField.performTextInput("125")
+        composeRule.waitForIdle()
+        customPctField.assertTextContains("125")
+
+        // Switch Output Format chip to PNG and back to WebP
+        composeRule.onNodeWithText("PNG").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("WEBP").performScrollTo().performClick()
+        composeRule.waitForIdle()
+    }
 }
+

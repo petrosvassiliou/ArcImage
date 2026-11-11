@@ -81,16 +81,19 @@ fun CompressionSettingsDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val hasDeviceStorageAccess = remember {
-        runCatching { DeviceFileRepository.hasAllFilesAccess(context) }.getOrDefault(false)
-    }
 
     var archiveName by rememberSaveable(initialConfig.archiveBaseName) {
         mutableStateOf(initialConfig.archiveBaseName)
     }
-    var selectedFormatName by rememberSaveable { mutableStateOf(initialConfig.format.name) }
-    var selectedLevelName by rememberSaveable { mutableStateOf(initialConfig.level.name) }
-    var password by rememberSaveable { mutableStateOf(initialConfig.password) }
+    var selectedFormatName by rememberSaveable(initialConfig.format.name) {
+        mutableStateOf(initialConfig.format.name)
+    }
+    var selectedLevelName by rememberSaveable(initialConfig.level.name) {
+        mutableStateOf(initialConfig.level.name)
+    }
+    var password by rememberSaveable(initialConfig.password) {
+        mutableStateOf(initialConfig.password)
+    }
     var showPassword by rememberSaveable { mutableStateOf(false) }
 
     var chosenDestUriString by rememberSaveable(currentDestinationUri?.toString()) {
@@ -179,7 +182,10 @@ fun CompressionSettingsDialog(
                             }
                             FilledTonalButton(
                                 onClick = {
-                                    if (hasDeviceStorageAccess) {
+                                    val canBrowseDevice = runCatching {
+                                        DeviceFileRepository.hasAllFilesAccess(context)
+                                    }.getOrDefault(false)
+                                    if (canBrowseDevice) {
                                         showLocalFolderBrowser = true
                                     } else {
                                         onRequestSystemFolderPicker()
@@ -323,15 +329,9 @@ fun CompressionSettingsDialog(
     )
 
     if (showLocalFolderBrowser) {
-        val initialFolder = chosenDestUriString
-            ?.takeIf { it.startsWith("file://") }
-            ?.let { Uri.parse(it).path }
-            ?.let { File(it) }
-            ?.takeIf { it.isDirectory }
-            ?: runCatching { DeviceFileRepository.quickFolder(QuickFolder.DOWNLOADS) }
-                .getOrNull()
-                ?.takeIf { it.isDirectory }
-            ?: DeviceFileRepository.primaryStorageRoot()
+        val initialFolder = resolveInitialDestinationFolder(
+            chosenDestUriString?.let { Uri.parse(it) }
+        )
 
         DeviceFolderPickerDialog(
             initialDir = initialFolder,
@@ -349,19 +349,40 @@ fun CompressionSettingsDialog(
     }
 }
 
+fun resolveInitialDestinationFolder(currentDestinationUri: Uri?): File {
+    return currentDestinationUri
+        ?.takeIf { it.scheme == "file" }
+        ?.path
+        ?.let { File(it) }
+        ?.takeIf { it.isDirectory }
+        ?: runCatching { DeviceFileRepository.quickFolder(QuickFolder.DOWNLOADS) }
+            .getOrNull()
+            ?.takeIf { it.isDirectory }
+        ?: DeviceFileRepository.primaryStorageRoot()
+}
+
 /**
  * In-app destination folder browser over real device storage so the user can freely pick
- * ANY folder (including `Download` or root folders that Android's SAF picker restricts).
+ * ANY folder (including `Download`, internal storage root, or removable SD/USB volumes
+ * that Android's SAF picker restricts).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DeviceFolderPickerDialog(
+fun DeviceFolderPickerDialog(
     initialDir: File,
     onSelectDirectory: (File) -> Unit,
     onOpenSystemPicker: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val rootPath = remember { DeviceFileRepository.primaryStorageRoot().absolutePath }
+    val context = LocalContext.current
+    val storageRoots = remember(context) {
+        runCatching { DeviceFileRepository.storageRoots(context) }
+            .getOrElse {
+                val p = DeviceFileRepository.primaryStorageRoot().absolutePath
+                listOf(com.arcimage.app.data.files.StorageRoot(p, null, isPrimary = true))
+            }
+    }
+    val rootPaths = remember(storageRoots) { storageRoots.map { it.path }.toSet() }
     var currentPath by rememberSaveable { mutableStateOf(initialDir.absolutePath) }
     val currentDir = File(currentPath)
     val subFolders = remember(currentPath) {
@@ -370,7 +391,7 @@ private fun DeviceFolderPickerDialog(
                 .filter { it.isDirectory }
         }.getOrDefault(emptyList())
     }
-    val canGoUp = currentDir.parentFile != null && currentDir.absolutePath != rootPath
+    val canGoUp = currentDir.parentFile != null && currentDir.absolutePath !in rootPaths
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -389,16 +410,25 @@ private fun DeviceFolderPickerDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Quick folder shortcuts
+                // Mounted storage volume roots + quick folder shortcuts
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    AssistChip(
-                        onClick = { currentPath = rootPath },
-                        shape = CircleShape,
-                        label = { Text(stringResource(R.string.files_internal_storage)) }
-                    )
+                    storageRoots.forEach { volume ->
+                        val label = volume.description ?: stringResource(
+                            if (volume.isPrimary) {
+                                R.string.files_internal_storage
+                            } else {
+                                R.string.files_external_storage
+                            }
+                        )
+                        AssistChip(
+                            onClick = { currentPath = volume.path },
+                            shape = CircleShape,
+                            label = { Text(label) }
+                        )
+                    }
                     AssistChip(
                         onClick = {
                             val dl = DeviceFileRepository.quickFolder(QuickFolder.DOWNLOADS)

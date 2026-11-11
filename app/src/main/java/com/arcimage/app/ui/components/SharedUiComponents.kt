@@ -226,10 +226,39 @@ fun DeterminateProgressDialog(
 }
 
 fun shareOutputUri(context: Context, uri: Uri) {
+    val shareableUri = if (uri.scheme == "file") {
+        val path = uri.path ?: return
+        com.arcimage.app.data.util.DocumentUriHelper.safeUriForFile(context, java.io.File(path))
+    } else {
+        uri
+    }
+    val resolvedMime = com.arcimage.app.data.util.DocumentUriHelper.resolveMimeType(context, uri) ?: "*/*"
     val shareIntent = Intent(Intent.ACTION_SEND).apply {
-        type = context.contentResolver.getType(uri) ?: "*/*"
-        putExtra(Intent.EXTRA_STREAM, uri)
+        type = resolvedMime
+        putExtra(Intent.EXTRA_STREAM, shareableUri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.action_share)))
+    val chooser = Intent.createChooser(shareIntent, context.getString(R.string.action_share)).apply {
+        if (context !is android.app.Activity) {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+    runCatching { context.startActivity(chooser) }
+}
+
+fun openFileWithSystemApp(context: Context, file: java.io.File): Boolean {
+    if (!file.exists() || file.isDirectory) return false
+    val contentUri = com.arcimage.app.data.util.DocumentUriHelper.safeUriForFile(context, file)
+    val mime = com.arcimage.app.data.util.DocumentUriHelper.guessMimeTypeFromFileName(file.name) ?: "*/*"
+    val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(contentUri, mime)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        if (context !is android.app.Activity) {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+    return runCatching {
+        context.startActivity(viewIntent)
+        true
+    }.getOrDefault(false)
 }

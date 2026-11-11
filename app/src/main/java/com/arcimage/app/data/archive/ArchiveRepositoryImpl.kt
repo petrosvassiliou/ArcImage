@@ -665,25 +665,35 @@ class ArchiveRepositoryImpl(
                 return extractedItems
             }
         } catch (e: PasswordRequiredException) {
-            throw ArchivePasswordRequiredException(displayName)
+            // Commons Compress may require external crypto or hit encrypted 7z headers; delegate to native 7-Zip-JBinding
+            return extractNativeSevenZipFile(staged, displayName, destRoot, selectedPaths, password, onProgress)
         } catch (e: IOException) {
             if (e.message?.contains("password", ignoreCase = true) == true ||
+                e.message?.contains("encrypted", ignoreCase = true) == true ||
                 e.message?.contains("Decrypt", ignoreCase = true) == true
             ) {
-                if (password.isNullOrEmpty()) {
-                    throw ArchivePasswordRequiredException(displayName)
-                } else {
-                    throw ArchiveInvalidPasswordException()
+                return runCatching {
+                    extractNativeSevenZipFile(staged, displayName, destRoot, selectedPaths, password, onProgress)
+                }.getOrElse { nativeErr ->
+                    when (nativeErr) {
+                        is ArchivePasswordRequiredException, is ArchiveInvalidPasswordException -> throw nativeErr
+                        else -> if (password.isNullOrEmpty()) {
+                            throw ArchivePasswordRequiredException(displayName)
+                        } else {
+                            throw ArchiveInvalidPasswordException()
+                        }
+                    }
                 }
             }
-            throw e
+            // Fallback to native 7-Zip-JBinding for BCJ2, PPMd, LZMA, or solid encrypted 7z headers
+            return extractNativeSevenZipFile(staged, displayName, destRoot, selectedPaths, password, onProgress)
         } finally {
             if (shouldDelete && staged.exists()) staged.delete()
         }
     }
 
     // =========================================================================
-    // RAR4, RAR5 & Password-Protected RAR via 7-Zip-JBinding-4Android (ARM64 + x86_64)
+    // RAR4, RAR5 & Password-Protected RAR/7z via 7-Zip-JBinding-4Android (ARM64 + x86_64)
     // =========================================================================
 
     private fun inspectNativeSevenZipArchive(
@@ -760,74 +770,85 @@ class ArchiveRepositoryImpl(
         val staged = DocumentUriHelper.copyUriToTempFile(context, archiveUri, "rar")
         val shouldDelete = archiveUri.scheme != "file"
         try {
-            val openCallback = OpenCryptoCallback(displayName, password)
-            RandomAccessFile(staged, "r").use { raf ->
-                try {
-                    SevenZip.openInArchive(null, RandomAccessFileInStream(raf), openCallback).use { inArchive ->
-                        val count = inArchive.numberOfItems
-                        val indicesToExtract = mutableListOf<Int>()
-
-                        for (i in 0 until count) {
-                            val rawPath = (inArchive.getProperty(i, PropID.PATH) as? String)
-                                ?.replace('\\', '/')
-                                ?: "item_$i"
-                            val encrypted = (inArchive.getProperty(i, PropID.ENCRYPTED) as? Boolean) ?: false
-                            if (selectedPaths.isNullOrEmpty() || matchesSelectedPath(rawPath, selectedPaths)) {
-                                if (encrypted && password.isNullOrEmpty()) {
-                                    throw ArchivePasswordRequiredException(displayName)
-                                }
-                                indicesToExtract += i
-                            }
-                        }
-
-                        if (indicesToExtract.isEmpty()) return 0
-
-                        onProgress(
-                            ArchiveOperationProgress(
-                                operationType = ArchiveOperationType.EXTRACTING,
-                                currentItemName = displayName,
-                                completedItems = 0,
-                                totalItems = indicesToExtract.size
-                            )
-                        )
-
-                        val extractCallback = ExtractCryptoCallback(
-                            inArchive = inArchive,
-                            destRoot = destRoot,
-                            archiveDisplayName = displayName,
-                            password = password
-                        )
-
-                        inArchive.extract(indicesToExtract.toIntArray(), false, extractCallback)
-                        extractCallback.pendingException?.let { throw it }
-
-                        onProgress(
-                            ArchiveOperationProgress(
-                                operationType = ArchiveOperationType.EXTRACTING,
-                                currentItemName = displayName,
-                                processedBytes = extractCallback.totalBytes.coerceAtLeast(1L),
-                                totalBytes = extractCallback.totalBytes.coerceAtLeast(1L),
-                                completedItems = indicesToExtract.size,
-                                totalItems = indicesToExtract.size
-                            )
-                        )
-                        return indicesToExtract.size
-                    }
-                } catch (e: SevenZipException) {
-                    openCallback.pendingAuthException?.let { throw it }
-                    if (password.isNullOrEmpty() && openCallback.passwordWasRequested) {
-                        throw ArchivePasswordRequiredException(displayName)
-                    }
-                    if (!password.isNullOrEmpty() &&
-                        (e.message?.contains("password", ignoreCase = true) == true || openCallback.passwordWasRequested)
-                    ) {
-                        throw ArchiveInvalidPasswordException()
-                    }
-                    throw e
-                }
-            }
+            return extractNativeSevenZipFile(staged, displayName, destRoot, selectedPaths, password, onProgress)
         } finally {
             if (shouldDelete && staged.exists()) staged.delete()
+        }
+    }
+
+    private suspend fun extractNativeSevenZipFile(
+        staged: File,
+        displayName: String,
+        destRoot: File,
+        selectedPaths: Set<String>?,
+        password: String?,
+        onProgress: suspend (ArchiveOperationProgress) -> Unit
+    ): Int {
+        val openCallback = OpenCryptoCallback(displayName, password)
+        RandomAccessFile(staged, "r").use { raf ->
+            try {
+                SevenZip.openInArchive(null, RandomAccessFileInStream(raf), openCallback).use { inArchive ->
+                    val count = inArchive.numberOfItems
+                    val indicesToExtract = mutableListOf<Int>()
+
+                    for (i in 0 until count) {
+                        val rawPath = (inArchive.getProperty(i, PropID.PATH) as? String)
+                            ?.replace('\\', '/')
+                            ?: "item_$i"
+                        val encrypted = (inArchive.getProperty(i, PropID.ENCRYPTED) as? Boolean) ?: false
+                        if (selectedPaths.isNullOrEmpty() || matchesSelectedPath(rawPath, selectedPaths)) {
+                            if (encrypted && password.isNullOrEmpty()) {
+                                throw ArchivePasswordRequiredException(displayName)
+                            }
+                            indicesToExtract += i
+                        }
+                    }
+
+                    if (indicesToExtract.isEmpty()) return 0
+
+                    onProgress(
+                        ArchiveOperationProgress(
+                            operationType = ArchiveOperationType.EXTRACTING,
+                            currentItemName = displayName,
+                            completedItems = 0,
+                            totalItems = indicesToExtract.size
+                        )
+                    )
+
+                    val extractCallback = ExtractCryptoCallback(
+                        inArchive = inArchive,
+                        destRoot = destRoot,
+                        archiveDisplayName = displayName,
+                        password = password
+                    )
+
+                    inArchive.extract(indicesToExtract.toIntArray(), false, extractCallback)
+                    extractCallback.pendingException?.let { throw it }
+
+                    onProgress(
+                        ArchiveOperationProgress(
+                            operationType = ArchiveOperationType.EXTRACTING,
+                            currentItemName = displayName,
+                            processedBytes = extractCallback.totalBytes.coerceAtLeast(1L),
+                            totalBytes = extractCallback.totalBytes.coerceAtLeast(1L),
+                            completedItems = indicesToExtract.size,
+                            totalItems = indicesToExtract.size
+                        )
+                    )
+                    return indicesToExtract.size
+                }
+            } catch (e: SevenZipException) {
+                openCallback.pendingAuthException?.let { throw it }
+                if (password.isNullOrEmpty() && openCallback.passwordWasRequested) {
+                    throw ArchivePasswordRequiredException(displayName)
+                }
+                if (!password.isNullOrEmpty() &&
+                    (e.message?.contains("password", ignoreCase = true) == true || openCallback.passwordWasRequested)
+                ) {
+                    throw ArchiveInvalidPasswordException()
+                }
+                throw e
+            }
         }
     }
 

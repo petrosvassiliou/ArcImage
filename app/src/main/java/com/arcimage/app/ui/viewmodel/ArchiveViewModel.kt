@@ -35,7 +35,8 @@ data class PasswordPromptState(
     val archiveUri: Uri,
     val archiveName: String,
     val purpose: PasswordPurpose,
-    val hasInvalidPasswordError: Boolean = false
+    val hasInvalidPasswordError: Boolean = false,
+    val explicitTargetPaths: Set<String>? = null
 )
 
 sealed interface UiBannerMessage {
@@ -354,7 +355,18 @@ class ArchiveViewModel(
             }
             PasswordPurpose.EXTRACT_ARCHIVE -> {
                 _uiState.update { it.copy(unlockedPassword = password, passwordPrompt = null) }
-                startExtraction(extractOnlySelected = _uiState.value.selectedEntryPaths.isNotEmpty(), explicitPassword = password)
+                if (prompt.explicitTargetPaths != null) {
+                    startExtraction(
+                        extractOnlySelected = true,
+                        explicitPassword = password,
+                        explicitTargetPaths = prompt.explicitTargetPaths
+                    )
+                } else {
+                    startExtraction(
+                        extractOnlySelected = _uiState.value.selectedEntryPaths.isNotEmpty(),
+                        explicitPassword = password
+                    )
+                }
             }
         }
     }
@@ -471,19 +483,36 @@ class ArchiveViewModel(
         }
     }
 
-    fun startExtraction(extractOnlySelected: Boolean, explicitPassword: String? = null) {
+    fun extractSpecificEntries(paths: Set<String>) {
+        if (paths.isEmpty()) return
+        startExtraction(extractOnlySelected = true, explicitTargetPaths = paths)
+    }
+
+    private fun matchesSelectedOrDescendant(entryPath: String, selected: Set<String>): Boolean {
+        val normalized = entryPath.replace('\\', '/').trim('/')
+        return selected.any { sel ->
+            val cleanSel = sel.replace('\\', '/').trim('/')
+            normalized == cleanSel || normalized.startsWith("$cleanSel/")
+        }
+    }
+
+    fun startExtraction(
+        extractOnlySelected: Boolean,
+        explicitPassword: String? = null,
+        explicitTargetPaths: Set<String>? = null
+    ) {
         val state = _uiState.value
         val archiveUri = state.currentArchiveUri ?: return
-        val selectedPaths = if (extractOnlySelected && state.selectedEntryPaths.isNotEmpty()) {
-            state.selectedEntryPaths
-        } else {
-            null
+        val selectedPaths = when {
+            !explicitTargetPaths.isNullOrEmpty() -> explicitTargetPaths
+            extractOnlySelected && state.selectedEntryPaths.isNotEmpty() -> state.selectedEntryPaths
+            else -> null
         }
         val passwordToUse = explicitPassword ?: state.unlockedPassword
 
-        // If any targeted entry is marked encrypted and we don't have a password yet, prompt immediately
+        // If any targeted entry (or child inside a targeted folder) is encrypted and we lack a password, prompt immediately
         val targetEntries = if (selectedPaths != null) {
-            state.archiveEntries.filter { it.path in selectedPaths }
+            state.archiveEntries.filter { matchesSelectedOrDescendant(it.path, selectedPaths) }
         } else {
             state.archiveEntries
         }
@@ -494,7 +523,8 @@ class ArchiveViewModel(
                         archiveUri = archiveUri,
                         archiveName = state.currentArchiveName,
                         purpose = PasswordPurpose.EXTRACT_ARCHIVE,
-                        hasInvalidPasswordError = false
+                        hasInvalidPasswordError = false,
+                        explicitTargetPaths = explicitTargetPaths
                     )
                 )
             }
@@ -545,7 +575,8 @@ class ArchiveViewModel(
                             archiveUri = archiveUri,
                             archiveName = state.currentArchiveName,
                             purpose = PasswordPurpose.EXTRACT_ARCHIVE,
-                            hasInvalidPasswordError = false
+                            hasInvalidPasswordError = false,
+                            explicitTargetPaths = explicitTargetPaths
                         )
                     )
                 }
@@ -558,7 +589,8 @@ class ArchiveViewModel(
                             archiveUri = archiveUri,
                             archiveName = state.currentArchiveName,
                             purpose = PasswordPurpose.EXTRACT_ARCHIVE,
-                            hasInvalidPasswordError = true
+                            hasInvalidPasswordError = true,
+                            explicitTargetPaths = explicitTargetPaths
                         )
                     )
                 }

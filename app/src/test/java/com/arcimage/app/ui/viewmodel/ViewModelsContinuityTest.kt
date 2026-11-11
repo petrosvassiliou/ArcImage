@@ -385,5 +385,135 @@ class ViewModelsContinuityTest {
                 tempDir.deleteRecursively()
             }
         }
+
+    @Test
+    fun `ArchiveViewModel extractSpecificEntries extracts targeted folder across password prompt without mutating selection`() =
+        runTest {
+            val fakeUri = Uri.parse("content://com.arcimage.test/mixed_vault.zip")
+            var extractedSelection: Set<String>? = null
+            var extractedPassword: String? = null
+
+            val fakeArchiveRepo = object : ArchiveRepository {
+                override suspend fun resolveSourceItems(uris: List<Uri>): List<SourceItem> = emptyList()
+
+                override suspend fun inspectArchive(archiveUri: Uri, password: String?): List<ArchiveEntryItem> =
+                    listOf(
+                        ArchiveEntryItem("docs/", "docs", true, 0L, 0L, 0L, false, 0),
+                        ArchiveEntryItem("docs/secret.pdf", "secret.pdf", false, 4096L, 2048L, 0L, true, 1),
+                        ArchiveEntryItem("public/readme.txt", "readme.txt", false, 512L, 256L, 0L, false, 1)
+                    )
+
+                override fun compressItems(
+                    items: List<SourceItem>,
+                    config: CompressionConfig,
+                    destinationTreeUri: Uri?
+                ): Flow<ArchiveOperationProgress> = flow {}
+
+                override fun extractArchive(
+                    archiveUri: Uri,
+                    destinationTreeUri: Uri?,
+                    selectedEntryPaths: Set<String>?,
+                    password: String?
+                ): Flow<ArchiveOperationProgress> = flow {
+                    extractedSelection = selectedEntryPaths
+                    extractedPassword = password
+                    emit(
+                        ArchiveOperationProgress(
+                            operationType = com.arcimage.app.model.ArchiveOperationType.EXTRACT,
+                            processedBytes = 4096L,
+                            totalBytes = 4096L,
+                            currentItemName = "docs/secret.pdf",
+                            completedCount = 1,
+                            totalCount = 1
+                        )
+                    )
+                }
+            }
+
+            val vm = ArchiveViewModel(fakeArchiveRepo, SavedStateHandle())
+            vm.openArchiveForInspection(fakeUri, password = null)
+            advanceUntilIdle()
+
+            // User has checked "public/readme.txt" in the multi-select checkboxes
+            vm.toggleEntrySelection("public/readme.txt")
+            assertEquals(setOf("public/readme.txt"), vm.uiState.value.selectedEntryPaths)
+
+            // User clicks "Extract" on focused/context-menu folder "docs/" (which has an encrypted child)
+            vm.extractSpecificEntries(setOf("docs/"))
+            advanceUntilIdle()
+
+            // Multi-select checkboxes remain untouched while password prompt preserves explicit target
+            assertEquals(setOf("public/readme.txt"), vm.uiState.value.selectedEntryPaths)
+            assertNotNull(vm.uiState.value.passwordPrompt)
+            assertEquals(setOf("docs/"), vm.uiState.value.passwordPrompt?.explicitTargetPaths)
+
+            // Submitting password extracts ONLY "docs/" with password and preserves user selection
+            vm.submitPasswordPrompt("vaultPass99")
+            advanceUntilIdle()
+
+            assertNull(vm.uiState.value.passwordPrompt)
+            assertEquals(setOf("docs/"), extractedSelection)
+            assertEquals("vaultPass99", extractedPassword)
+            assertEquals(setOf("public/readme.txt"), vm.uiState.value.selectedEntryPaths)
+        }
+
+    @Test
+    fun `ImageStudioViewModel persists destinationTreeUri and destinationLabel across SavedStateHandle recreation`() {
+        val fakeImageRepo = object : ImageRepository {
+            override suspend fun loadBatchItems(uris: List<Uri>): List<ImageBatchItem> = emptyList()
+            override fun estimateItemOutputSize(item: ImageBatchItem, config: ImageProcessConfig): Long = 0L
+            override fun estimateBatchOutputSize(items: List<ImageBatchItem>, config: ImageProcessConfig): Long = 0L
+            override fun processBatch(
+                items: List<ImageBatchItem>,
+                config: ImageProcessConfig,
+                destinationTreeUri: Uri?
+            ): Flow<ImageBatchProgress> = flow {}
+        }
+
+        val handle = SavedStateHandle()
+        val destUri = Uri.parse("file:///storage/emulated/0/Pictures/ConvertedBatch")
+        val vm1 = ImageStudioViewModel(fakeImageRepo, handle)
+        vm1.setDestinationTree(destUri, "ConvertedBatch")
+
+        val vm2 = ImageStudioViewModel(fakeImageRepo, handle)
+        assertEquals(destUri, vm2.uiState.value.destinationTreeUri)
+        assertEquals("ConvertedBatch", vm2.uiState.value.destinationLabel)
+    }
+
+    @Test
+    fun `DocumentUriHelper resolves accurate MIME types and safe URIs for local files`() {
+        val context = RuntimeEnvironment.getApplication()
+        val sample7z = File(context.cacheDir, "backup_2026.7z").apply { writeText("7z") }
+        val sampleTarGz = File(context.cacheDir, "logs.tar.gz").apply { writeText("gz") }
+        val sampleWebp = File(context.cacheDir, "banner.webp").apply { writeText("webp") }
+        val samplePdf = File(context.cacheDir, "invoice.pdf").apply { writeText("pdf") }
+
+        try {
+            assertEquals(
+                "application/x-7z-compressed",
+                com.arcimage.app.data.util.DocumentUriHelper.resolveMimeType(context, Uri.fromFile(sample7z))
+            )
+            assertEquals(
+                "application/gzip",
+                com.arcimage.app.data.util.DocumentUriHelper.resolveMimeType(context, Uri.fromFile(sampleTarGz))
+            )
+            assertEquals(
+                "image/webp",
+                com.arcimage.app.data.util.DocumentUriHelper.resolveMimeType(context, Uri.fromFile(sampleWebp))
+            )
+            assertEquals(
+                "application/pdf",
+                com.arcimage.app.data.util.DocumentUriHelper.resolveMimeType(context, Uri.fromFile(samplePdf))
+            )
+            val safeUri = com.arcimage.app.data.util.DocumentUriHelper.safeUriForFile(context, samplePdf)
+            assertNotNull(safeUri)
+        } finally {
+            sample7z.delete()
+            sampleTarGz.delete()
+            sampleWebp.delete()
+            samplePdf.delete()
+        }
+    }
 }
+
 

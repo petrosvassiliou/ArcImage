@@ -1,6 +1,7 @@
 package com.arcimage.app.ui.image
 
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,20 +27,12 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.outlined.AddPhotoAlternate
-import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.DeleteSweep
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.SelectAll
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DeleteSweep
@@ -51,14 +44,11 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -93,7 +83,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -101,11 +90,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowWidthSizeClass
 import coil.compose.AsyncImage
 import com.arcimage.app.R
+import com.arcimage.app.data.files.DeviceFileRepository
 import com.arcimage.app.data.util.DocumentUriHelper
 import com.arcimage.app.model.FileSizeFormatter
 import com.arcimage.app.model.ImageBatchItem
 import com.arcimage.app.model.ImageFormat
 import com.arcimage.app.model.ResizeMode
+import com.arcimage.app.ui.archive.DeviceFolderPickerDialog
+import com.arcimage.app.ui.archive.resolveInitialDestinationFolder
 import com.arcimage.app.ui.components.DeterminateProgressDialog
 import com.arcimage.app.ui.components.DropZoneOverlay
 import com.arcimage.app.ui.components.FloatingActionPill
@@ -141,6 +133,7 @@ fun ImageStudioScreen(
     val adaptiveInfo = currentWindowAdaptiveInfo()
     val isCompactWidth = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT
     var isDragHovering by rememberSaveable { mutableStateOf(false) }
+    var showDestinationPickerDialog by rememberSaveable { mutableStateOf(false) }
 
     DisposableEffect(navigator, onRegisterSubBackHandler) {
         onRegisterSubBackHandler?.invoke {
@@ -189,6 +182,17 @@ fun ImageStudioScreen(
         }
     }
 
+    val requestDestinationPicker: () -> Unit = {
+        val canBrowseDevice = runCatching {
+            DeviceFileRepository.hasAllFilesAccess(context)
+        }.getOrDefault(false)
+        if (canBrowseDevice) {
+            showDestinationPickerDialog = true
+        } else {
+            destinationLauncher.launch(null)
+        }
+    }
+
     LaunchedEffect(triggerOpenImagePicker) {
         if (triggerOpenImagePicker) {
             onConsumedQuickLaunch()
@@ -229,7 +233,7 @@ fun ImageStudioScreen(
                         onAddImages = {
                             openImageDocsLauncher.launch(arrayOf("image/*"))
                         },
-                        onChooseDestination = { destinationLauncher.launch(null) },
+                        onChooseDestination = requestDestinationPicker,
                         onOpenSettingsPane = {
                             scope.launch {
                                 navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, "settings")
@@ -258,6 +262,7 @@ fun ImageStudioScreen(
                 AnimatedPane {
                     ImageSettingsDetailPane(
                         uiState = uiState,
+                        estimateItemSize = { viewModel.estimateItemBytes(it) },
                         showBackButton = navigator.canNavigateBack(),
                         onNavigateBack = { scope.launch { navigator.navigateBack() } },
                         onSelectResizeMode = { viewModel.setResizeMode(it) },
@@ -275,6 +280,23 @@ fun ImageStudioScreen(
         )
 
         DropZoneOverlay(visible = isDragHovering)
+    }
+
+    if (showDestinationPickerDialog) {
+        DeviceFolderPickerDialog(
+            initialDir = resolveInitialDestinationFolder(uiState.destinationTreeUri),
+            onSelectDirectory = { dir ->
+                val uri = Uri.fromFile(dir)
+                val label = dir.name.ifBlank { dir.absolutePath }
+                viewModel.setDestinationTree(uri, label)
+                showDestinationPickerDialog = false
+            },
+            onOpenSystemPicker = {
+                showDestinationPickerDialog = false
+                destinationLauncher.launch(null)
+            },
+            onDismiss = { showDestinationPickerDialog = false }
+        )
     }
 
     uiState.activeProgress?.let { progress ->
@@ -328,7 +350,7 @@ private fun ImageBatchMasterPane(
                 Text(stringResource(R.string.image_add_photos))
             }
 
-            if (isCompactWidth && uiState.batchItems.isNotEmpty()) {
+            if (isCompactWidth) {
                 OutlinedButton(onClick = onOpenSettingsPane, shape = CircleShape) {
                     Icon(Icons.Rounded.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
@@ -427,11 +449,13 @@ private fun ImageBatchMasterPane(
                 }
 
                 // Floating Batch Action Pill
-                val countToProcess = if (uiState.selectedIds.isNotEmpty()) {
-                    uiState.selectedIds.size
+                val activeItems = if (uiState.selectedIds.isNotEmpty()) {
+                    uiState.batchItems.filter { it.id in uiState.selectedIds }
                 } else {
-                    uiState.batchItems.size
+                    uiState.batchItems
                 }
+                val activeOriginalBytes = activeItems.sumOf { it.originalSizeBytes }
+                val activeOutputBytes = activeItems.sumOf { it.actualOutputSizeBytes ?: estimateItemSize(it) }
                 FloatingActionPill(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -445,11 +469,11 @@ private fun ImageBatchMasterPane(
                         Text(
                             text = stringResource(
                                 R.string.image_savings_badge,
-                                FileSizeFormatter.formatBytes(uiState.totalOriginalBytes),
-                                FileSizeFormatter.formatBytes(uiState.estimatedTotalOutputBytes),
+                                FileSizeFormatter.formatBytes(activeOriginalBytes),
+                                FileSizeFormatter.formatBytes(activeOutputBytes),
                                 FileSizeFormatter.formatDeltaPercent(
-                                    uiState.totalOriginalBytes,
-                                    uiState.estimatedTotalOutputBytes
+                                    activeOriginalBytes,
+                                    activeOutputBytes
                                 )
                             ),
                             style = MaterialTheme.typography.labelLarge,
@@ -466,7 +490,7 @@ private fun ImageBatchMasterPane(
                     Button(onClick = onProcessBatch, shape = CircleShape) {
                         Icon(Icons.Rounded.PhotoSizeSelectLarge, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.image_process_batch, countToProcess))
+                        Text(stringResource(R.string.image_process_batch, activeItems.size))
                     }
                 }
             }
@@ -604,6 +628,20 @@ private fun ImageGridCard(
                         onPrimaryClick()
                     }
                 )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (isSelected) R.string.action_clear_selection else R.string.action_select
+                            )
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Rounded.CheckCircle, contentDescription = null) },
+                    onClick = {
+                        menuOffset = null
+                        onToggleSelect()
+                    }
+                )
                 if (item.outputUri != null) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_share)) },
@@ -665,6 +703,7 @@ private fun SettingsSection(
 @Composable
 private fun ImageSettingsDetailPane(
     uiState: ImageStudioUiState,
+    estimateItemSize: (ImageBatchItem) -> Long,
     showBackButton: Boolean,
     onNavigateBack: () -> Unit,
     onSelectResizeMode: (ResizeMode) -> Unit,
@@ -677,6 +716,34 @@ private fun ImageSettingsDetailPane(
     onTogglePreserveExif: (Boolean) -> Unit,
     onProcessBatch: () -> Unit
 ) {
+    val activeItems = if (uiState.selectedIds.isNotEmpty()) {
+        uiState.batchItems.filter { it.id in uiState.selectedIds }
+    } else {
+        uiState.batchItems
+    }
+    val activeOriginalBytes = activeItems.sumOf { it.originalSizeBytes }
+    val activeOutputBytes = activeItems.sumOf { it.actualOutputSizeBytes ?: estimateItemSize(it) }
+
+    var customPctText by rememberSaveable { mutableStateOf(uiState.config.customPercentage.toString()) }
+    var widthText by rememberSaveable { mutableStateOf(uiState.config.exactWidth.toString()) }
+    var heightText by rememberSaveable { mutableStateOf(uiState.config.exactHeight.toString()) }
+
+    LaunchedEffect(uiState.config.customPercentage) {
+        if (customPctText.toIntOrNull() != uiState.config.customPercentage) {
+            customPctText = uiState.config.customPercentage.toString()
+        }
+    }
+    LaunchedEffect(uiState.config.exactWidth) {
+        if (widthText.toIntOrNull() != uiState.config.exactWidth) {
+            widthText = uiState.config.exactWidth.toString()
+        }
+    }
+    LaunchedEffect(uiState.config.exactHeight) {
+        if (heightText.toIntOrNull() != uiState.config.exactHeight) {
+            heightText = uiState.config.exactHeight.toString()
+        }
+    }
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         shape = MaterialTheme.shapes.extraLarge,
@@ -749,7 +816,7 @@ private fun ImageSettingsDetailPane(
                                     color = Color.White.copy(alpha = 0.8f)
                                 )
                                 Text(
-                                    text = FileSizeFormatter.formatBytes(uiState.totalOriginalBytes),
+                                    text = FileSizeFormatter.formatBytes(activeOriginalBytes),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color.White
@@ -762,7 +829,7 @@ private fun ImageSettingsDetailPane(
                                     color = Color.White.copy(alpha = 0.8f)
                                 )
                                 Text(
-                                    text = FileSizeFormatter.formatBytes(uiState.estimatedTotalOutputBytes),
+                                    text = FileSizeFormatter.formatBytes(activeOutputBytes),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -776,8 +843,8 @@ private fun ImageSettingsDetailPane(
                         ) {
                             Text(
                                 text = FileSizeFormatter.formatDeltaPercent(
-                                    uiState.totalOriginalBytes,
-                                    uiState.estimatedTotalOutputBytes
+                                    activeOriginalBytes,
+                                    activeOutputBytes
                                 ),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
@@ -806,9 +873,11 @@ private fun ImageSettingsDetailPane(
 
                 if (uiState.config.resizeMode == ResizeMode.PERCENT_CUSTOM) {
                     OutlinedTextField(
-                        value = uiState.config.customPercentage.toString(),
+                        value = customPctText,
                         onValueChange = { raw ->
-                            raw.filter { it.isDigit() }.toIntOrNull()?.let(onChangeCustomPercent)
+                            val filtered = raw.filter { it.isDigit() }.take(5)
+                            customPctText = filtered
+                            filtered.toIntOrNull()?.takeIf { it in 1..500 }?.let(onChangeCustomPercent)
                         },
                         label = { Text(stringResource(R.string.image_custom_percent_label)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -822,9 +891,11 @@ private fun ImageSettingsDetailPane(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         OutlinedTextField(
-                            value = uiState.config.exactWidth.toString(),
+                            value = widthText,
                             onValueChange = { raw ->
-                                raw.filter { it.isDigit() }.toIntOrNull()?.let(onChangeExactWidth)
+                                val filtered = raw.filter { it.isDigit() }.take(5)
+                                widthText = filtered
+                                filtered.toIntOrNull()?.takeIf { it in 1..16384 }?.let(onChangeExactWidth)
                             },
                             label = { Text(stringResource(R.string.image_width_px_label)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -833,9 +904,11 @@ private fun ImageSettingsDetailPane(
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
-                            value = uiState.config.exactHeight.toString(),
+                            value = heightText,
                             onValueChange = { raw ->
-                                raw.filter { it.isDigit() }.toIntOrNull()?.let(onChangeExactHeight)
+                                val filtered = raw.filter { it.isDigit() }.take(5)
+                                heightText = filtered
+                                filtered.toIntOrNull()?.takeIf { it in 1..16384 }?.let(onChangeExactHeight)
                             },
                             label = { Text(stringResource(R.string.image_height_px_label)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -890,7 +963,7 @@ private fun ImageSettingsDetailPane(
                 Text(
                     text = stringResource(
                         R.string.image_estimated_output,
-                        FileSizeFormatter.formatBytes(uiState.estimatedTotalOutputBytes)
+                        FileSizeFormatter.formatBytes(activeOutputBytes)
                     ),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary

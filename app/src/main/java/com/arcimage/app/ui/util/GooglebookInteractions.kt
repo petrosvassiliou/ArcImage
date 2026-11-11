@@ -21,13 +21,6 @@ import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.isSecondaryPressed
@@ -35,48 +28,6 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-
-/**
- * Hardware keyboard shortcuts for Googlebook OS laptops & desktops:
- * - Ctrl+A (or Cmd+A): Select All
- * - Ctrl+O (or Cmd+O): Open File / Archive / Image Picker
- * - Delete / ForwardDelete: Remove Selected Items
- * - Esc: Clear Selection or Dismiss Dialog
- */
-fun Modifier.arcKeyboardShortcuts(
-    onSelectAll: () -> Unit,
-    onOpenPicker: () -> Unit,
-    onDeleteSelected: () -> Unit,
-    onEscape: () -> Unit,
-    onNavigateUp: () -> Unit = {}
-): Modifier = this.onPreviewKeyEvent { keyEvent ->
-    if (keyEvent.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-
-    val modifierHeld = keyEvent.isCtrlPressed || keyEvent.isMetaPressed
-    when {
-        modifierHeld && keyEvent.key == Key.A -> {
-            onSelectAll()
-            true
-        }
-        modifierHeld && keyEvent.key == Key.O -> {
-            onOpenPicker()
-            true
-        }
-        keyEvent.key == Key.Delete -> {
-            onDeleteSelected()
-            true
-        }
-        keyEvent.key == Key.Backspace -> {
-            onNavigateUp()
-            true
-        }
-        keyEvent.key == Key.Escape -> {
-            onEscape()
-            true
-        }
-        else -> false
-    }
-}
 
 /**
  * Mouse & haptic trackpad interaction modifier supporting:
