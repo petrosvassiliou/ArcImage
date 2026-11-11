@@ -419,12 +419,12 @@ class ViewModelsContinuityTest {
                     extractedPassword = password
                     emit(
                         ArchiveOperationProgress(
-                            operationType = com.arcimage.app.model.ArchiveOperationType.EXTRACT,
+                            operationType = com.arcimage.app.model.ArchiveOperationType.EXTRACTING,
+                            currentItemName = "docs/secret.pdf",
                             processedBytes = 4096L,
                             totalBytes = 4096L,
-                            currentItemName = "docs/secret.pdf",
-                            completedCount = 1,
-                            totalCount = 1
+                            completedItems = 1,
+                            totalItems = 1
                         )
                     )
                 }
