@@ -32,10 +32,10 @@ class MainActivity : AppCompatActivity() {
         const val ACTION_QUICK_IMAGE = "com.arcimage.app.action.QUICK_IMAGE"
     }
 
-    private val shellViewModel: MainShellViewModel by viewModels { ArcImageViewModelFactory.Factory }
-    private val archiveViewModel: ArchiveViewModel by viewModels { ArcImageViewModelFactory.Factory }
-    private val imageStudioViewModel: ImageStudioViewModel by viewModels { ArcImageViewModelFactory.Factory }
-    private val fileBrowserViewModel: FileBrowserViewModel by viewModels { ArcImageViewModelFactory.Factory }
+    internal val shellViewModel: MainShellViewModel by viewModels { ArcImageViewModelFactory.Factory }
+    internal val archiveViewModel: ArchiveViewModel by viewModels { ArcImageViewModelFactory.Factory }
+    internal val imageStudioViewModel: ImageStudioViewModel by viewModels { ArcImageViewModelFactory.Factory }
+    internal val fileBrowserViewModel: FileBrowserViewModel by viewModels { ArcImageViewModelFactory.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
