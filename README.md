@@ -1,70 +1,150 @@
-# ArcImage (`com.arcimage.app`)
+<div align="center">
 
-**ArcImage** is a modern, adaptive Material Design 3 (Material You) utility built natively for **Googlebook OS** and **Android 17+ (API 36)** combining an all-in-one **File Archiver / Extractor** and **Batch Image Resizer & Converter**, with full 6-language internationalization and Jetpack Glance desktop/homescreen widgets.
+<img src="docs/logo.svg" alt="ArcImage Logo" width="112" height="112" />
+
+# ArcImage
+
+**Native File Browser, Archive Manager & Batch Image Studio for Googlebook OS and Android**
+
+[![Latest Release](https://img.shields.io/github/v/release/petrosvassiliou/ArcImage?style=flat-square&logo=github&label=Release&color=6C3CE9)](https://github.com/petrosvassiliou/ArcImage/releases/latest)
+[![Android CI](https://img.shields.io/github/actions/workflow/status/petrosvassiliou/ArcImage/android-ci.yml?branch=main&style=flat-square&logo=githubactions&label=CI)](https://github.com/petrosvassiliou/ArcImage/actions/workflows/android-ci.yml)
+[![API 28–36](https://img.shields.io/badge/Android-9.0%E2%80%9317%20(API%2028%E2%80%9336)-00B4D8?style=flat-square&logo=android&logoColor=white)](https://github.com/petrosvassiliou/ArcImage)
+[![Material 3](https://img.shields.io/badge/Jetpack%20Compose-Material%203-7F52FF?style=flat-square&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+[![Languages](https://img.shields.io/badge/Languages-EN%20%C2%B7%20DE%20%C2%B7%20IT%20%C2%B7%20FR%20%C2%B7%20ES%20%C2%B7%20EL-00A896?style=flat-square)](#4-adaptive-googlebook-os--android-experience)
+[![Play Protect Safe](https://img.shields.io/badge/Play%20Protect-Compliant-2EA043?style=flat-square&logo=googleplay&logoColor=white)](#5-play-protect-compliant-updates--security)
+
+<p>
+  <a href="https://github.com/petrosvassiliou/ArcImage/releases/download/v1.1.3/ArcImage-1.1.3-universal.apk"><strong>Download Universal APK (v1.1.3)</strong></a>
+  ·
+  <a href="https://github.com/petrosvassiliou/ArcImage/releases/download/v1.1.3/ArcImage-1.1.3-arm64-v8a.apk">arm64-v8a APK</a>
+  ·
+  <a href="https://github.com/petrosvassiliou/ArcImage/releases/download/v1.1.3/ArcImage-1.1.3-x86_64.apk">x86_64 (Googlebook / Chromebook) APK</a>
+  ·
+  <a href="https://github.com/petrosvassiliou/ArcImage/releases/latest">All Releases &amp; SHA-256</a>
+</p>
+
+</div>
 
 ---
 
-## Key Capabilities
+**ArcImage** (`com.arcimage.app`) is an ad-free, 100% offline Material Design 3 (Material You) utility engineered natively in Kotlin and Jetpack Compose for **Googlebook OS**, **Chromebooks**, **Android Tablets**, and **Android Phones** (Android 9 Pie through Android 17 / API 36). It unifies a real **Device File Browser**, a multi-format **Archive Manager & Explorer**, and a **Batch Image Resizer & Format Converter** in one adaptive workspace.
 
-### 1. Adaptive Material 3 Architecture (Googlebook OS & Android)
-- **Compact Screens (Android Phones):** Branded `TopAppBar`, single-pane navigation (`NavigableListDetailPaneScaffold`), and bottom `NavigationBar`.
-- **Expanded Screens (Googlebook OS Laptops & Desktops):** `NavigationRail` with **ArcImage** emblem, live keyboard-shortcut bar, and multi-pane Master-Detail layout optimized for freeform window resizing and high-DPI displays.
-- **Desktop Input & Native Drag-and-Drop:**
-  - Mouse & haptic trackpad hover highlights and secondary right-click context menus positioned at cursor coordinates.
-  - Hardware keyboard shortcuts: `Ctrl+O` (Open), `Ctrl+A` (Select All), `Delete` (Remove Selected), `Esc` (Clear Selection / Close Modal).
-  - Cross-window `dragAndDropTarget` with `requestDragAndDropPermissions` for dropping files, recursive folders, archives, and images directly from the Googlebook OS File Manager.
-  - Native universal & ABI-split support for `arm64-v8a` and `x86_64` with 16 KB page-size alignment.
+---
 
-### 2. Googlebook OS Continuity, Share Targets & Glance Widget
-- **Jetpack Glance Widget (`ArcImageWidget`):** Responsive Material 3 desktop and homescreen widget offering one-tap **"Extract Archive"** and **"Resize/Convert Images"** quick actions.
-- **Cross-Device Continuity:** State persistence across freeform window resizes and phone-to-Googlebook handoff via `SavedStateHandle` and `rememberSaveable`.
-- **System Share & File Handlers:** Registered for `ACTION_SEND`, `ACTION_SEND_MULTIPLE`, and `ACTION_VIEW` across archive and image MIME types.
+## Screenshots
 
-### 3. Multi-Language Support (6 Languages + Runtime Switcher)
-- Complete localization in **English** (`en`), **German** (`de`), **Italian** (`it`), **French** (`fr`), **Spanish** (`es`), and **Greek** (`el` — full UTF-8 Greek script).
-- Instant runtime switching via `AppCompatDelegate.setApplicationLocales` and `res/xml/locales_config.xml`.
+### Googlebook OS, Desktop & Tablet (`2560 × 1432`)
 
-### 4. Core Feature 1: File & Folder Archiver / Extractor
-- **Compress & Extract:** `.zip` (standard Deflate/Store & AES-256 encrypted via Zip4j), `.7z`, `.tar`, `.tar.gz`, `.tar.bz2`, `.tar.xz`, `.gz`, `.bz2`, `.xz`.
-- **Extract & Inspect:** `.rar` and password-protected `.rar` (**RAR4 & RAR5**) via 7-Zip-JBinding-4Android.
-- **Security & UX:** Archive Explorer without full extraction, password prompt modals for encrypted ZIP/RAR/7Z headers, Zip-Slip path traversal protection (`ZipSlipGuard`), determinate progress, and cooperative coroutine cancellation.
+#### 1. Device File Browser (`Files`) — Light Theme
+Browse real internal & removable storage with one-tap folder shortcuts, interactive breadcrumbs, image thumbnails, search, Grid/List toggle, and multi-select batch actions (**Edit Images** / **Compress**).
 
-### 5. Core Feature 2: Batch Image Studio (Resize & Convert)
-- **Batch Resizing:** Scale by `25%`, `50%`, `75%`, custom `%`, or exact `Width × Height` pixels with **Maintain Aspect Ratio** lock.
-- **Quality & Live Output Estimation:** `1–100%` quality slider with real-time estimated batch output size and Before/After comparison badges.
-- **Format Conversion & EXIF Privacy:** Convert across `JPG`, `PNG`, `WEBP`, `GIF` (pure Kotlin GIF89a LZW encoder), `BMP` (32-bit BGRA DIB encoder), and `HEIC/HEIF` (`HeifWriter`), with optional EXIF metadata preservation or stripping (`ExifInterface`).
+![ArcImage Device File Browser on Googlebook OS](docs/screenshots/01-files-browser-desktop.png)
+
+#### 2. Archive Explorer — Main-Screen Contents & Archive Info Card
+Inspect compressed archives without full extraction: browse entries directly in the main workspace (with AES-256 lock indicators and selective extraction) while viewing archive metadata and quick actions on the bottom-left **Archive Info** card.
+
+![ArcImage Archive Explorer on Googlebook OS](docs/screenshots/02-archive-explorer-desktop.png)
+
+#### 3. Compression Settings — Destination, Name, 9 Formats & AES-256 Encryption
+Compressing any file or folder prompts for the **Destination Folder**, **Archive Name**, **Archive Format** (`.zip`, `.7z`, `.tar`, `.tar.gz`, `.tar.bz2`, `.tar.xz`, `.gz`, `.bz2`, `.xz`), compression level, and optional **AES-256** password protection.
+
+![ArcImage Compression Settings Dialog in Dark Mode](docs/screenshots/03-compression-dialog-dark.png)
+
+#### 4. Batch Image Studio — Two-Pane Desktop Workspace (Dark Theme)
+Batch resize and convert images side-by-side with live **Before / After** output size comparison, percentage & pixel presets, 6 target formats (`JPG`, `PNG`, `WEBP`, `GIF`, `BMP`, `HEIC`), quality slider, and EXIF metadata controls.
+
+![ArcImage Batch Image Studio on Googlebook OS in Dark Mode](docs/screenshots/04-image-studio-desktop-dark.png)
+
+---
+
+### Android Phone Portrait (`1080 × 2211`)
+
+| Mobile File Browser & Country-Flag Language Menu | Mobile Batch Image Studio (Dark Theme) |
+| :---: | :---: |
+| <img src="docs/screenshots/05-mobile-files-and-flags.png" alt="ArcImage Mobile Files Browser and Country Flag Switcher" width="380" /> | <img src="docs/screenshots/06-mobile-image-studio-dark.png" alt="ArcImage Mobile Image Studio in Dark Mode" width="380" /> |
+| *Adaptive compact layout with Back button, Grid cards & 6-flag language dropdown (`EN`, `DE`, `IT`, `FR`, `ES`, `EL`)* | *Compact batch queue with live per-image output dimensions, format badges & one-tap conversion* |
+
+---
+
+## Key Features
+
+### 1. Real Device File Browser (`Files`)
+- **Storage & Quick Shortcuts:** Browse primary internal storage and removable volumes with instant chips for **Internal storage**, **Downloads**, **Pictures**, **Camera**, and **Documents**.
+- **Fast Navigation:** Interactive breadcrumb path bar, parent-folder navigation, consistent **Back** button on every screen, live folder search, **Grid / List** view toggle, and sorting by **Name**, **Size**, or **Date**.
+- **Seamless Cross-Tool Workflows:** Tap any archive to inspect it in **Archive Manager**, tap any image to open it in **Image Studio**, or multi-select files and folders to **Compress**, **Edit Images**, **Share**, or **Delete** in one step.
+
+### 2. Archive Manager & Explorer
+- **Interactive Archive Explorer:** Displays the full contents of compressed archives in the main screen with nested folder navigation, entry search, and selective or full extraction, paired with a dedicated bottom-left **Archive Info** summary card.
+- **Full Compression Control:** Always prompts for the **Destination Folder**, **Archive Name**, **Archive Format**, compression level (`Store`, `Fast`, `Normal`, `Ultra`), and optional **AES-256** password encryption.
+- **Password-Protected Extraction:** Automatic encryption detection and password prompt modals for encrypted `.zip`, `.7z`, and `.rar` (**RAR4 & RAR5**) archives, including encrypted headers.
+
+| Format | Compress | Extract & Browse | Encryption Support |
+| :--- | :---: | :---: | :--- |
+| **ZIP** (`.zip`) | Yes | Yes | AES-256 & ZipCrypto (Zip4j) |
+| **7-Zip** (`.7z`) | Yes | Yes | AES-256 read/extract |
+| **RAR** (`.rar`) | — | Yes | RAR4 & RAR5 password extraction |
+| **TAR** (`.tar`, `.tar.gz`, `.tar.bz2`, `.tar.xz`) | Yes | Yes | — |
+| **Single-Stream** (`.gz`, `.bz2`, `.xz`) | Yes | Yes | — |
+
+### 3. Batch Image Studio
+- **Flexible Resize Modes:** Scale batches by `25%`, `50%`, `75%`, `Custom %`, or exact `Width × Height` pixels with an optional **Maintain Aspect Ratio** lock.
+- **6 Output Formats:** Convert across **JPG**, **PNG**, **WEBP** (lossy & lossless), **GIF** (native Kotlin GIF89a LZW encoder), **BMP** (32-bit BGRA DIB encoder), and **HEIC / HEIF** (`HeifWriter`).
+- **Live Size Estimation & EXIF Privacy:** Interactive `1–100%` quality slider with real-time estimated output size, **Before / After** savings badge, custom output directory picker, and optional **EXIF metadata** preservation or privacy stripping (`ExifInterface`).
+
+### 4. Adaptive Googlebook OS & Android Experience
+- **Desktop & Laptop Ready:** `NavigationRail` on expanded windows, freeform window resize continuity (`SavedStateHandle`), mouse hover states, right-click context menus at cursor coordinates, cross-window drag-and-drop (`requestDragAndDropPermissions`), and hardware keyboard shortcuts:
+  - `Ctrl + O` — Open file / add items
+  - `Ctrl + A` — Select all items
+  - `Delete` — Remove selected items
+  - `Esc` — Clear selection / dismiss modal
+- **Country-Flag Language Switcher (6 Languages):** Instant runtime switching via custom Canvas-rendered vector flags in the top bar for **English** (`en`), **German** (`de`), **Italian** (`it`), **French** (`fr`), **Spanish** (`es`), and **Greek** (`el`) powered by `AppCompatDelegate.setApplicationLocales`.
+- **Material You Themes & Glance Widget:** Cycle between **System**, **Light**, **Dark**, and **Dynamic Color** palettes, plus add the responsive **Jetpack Glance** desktop/homescreen widget (`ArcImageWidget`) for one-tap **Extract Archive** and **Resize/Convert Images** shortcuts.
+- **System Intents:** Registered as a native handler for `ACTION_VIEW`, `ACTION_SEND`, and `ACTION_SEND_MULTIPLE` across archive and image MIME types, with 16 KB page-size native alignment for `arm64-v8a` and `x86_64`.
+
+### 5. Play-Protect-Compliant Updates & Security
+- **Zero-Sideload Update Checker:** Checks the official GitHub Releases API in the background on startup (throttled to once every 24 hours) and on demand via the top-bar **Check for Updates** button. When a newer release is available, ArcImage displays release notes and opens Google Play or the official release page in the system browser — **never** requesting `REQUEST_INSTALL_PACKAGES`, keeping Google Play Protect 100% satisfied.
+- **Zip-Slip Protection:** Every archive extraction path is canonicalized and verified by `ZipSlipGuard` to block `../` directory traversal and symlink escape payloads.
+- **100% Local Processing:** No analytics SDKs, no ads, and no cloud uploads — your files, passwords, and photos never leave your device.
 
 ---
 
 ## Building & Testing
 
+### Prerequisites
+- **JDK 17+**
+- **Android SDK** (`compileSdk = 36`, `minSdk = 28`, Build-Tools `36.0.0`)
+
 ```bash
-# Run JVM unit tests (codecs, Zip-Slip security, BMP/GIF encoders, ViewModel continuity)
-gradle testDebugUnitTest
+# Run JVM unit tests (archive codecs, AES-256, ZipSlipGuard, GIF/BMP encoders, ViewModel continuity)
+./gradlew testDebugUnitTest
 
-# Run Android Lint
-gradle lintDebug
+# Run Android Lint checks (Debug & Release vital checks)
+./gradlew lintDebug lintVitalRelease
 
-# Build Universal + arm64-v8a + x86_64 APKs
-gradle assembleDebug assembleRelease
+# Build debug & release APKs (universal, arm64-v8a, x86_64)
+./gradlew assembleDebug assembleRelease
+
+# Run instrumented Compose UI & bitmap/EXIF tests on a connected device or emulator
+./gradlew connectedDebugAndroidTest
 ```
+
+### Regenerating High-Resolution Screenshots
+High-resolution desktop (`2560×1600`) and mobile (`1080×2400`) screenshots are generated automatically on a KVM-accelerated Android 14 emulator via [`ScreenshotCaptureTest.kt`](app/src/androidTest/java/com/arcimage/app/ui/ScreenshotCaptureTest.kt) and [`.github/workflows/screenshots.yml`](.github/workflows/screenshots.yml):
+
+```bash
+gh workflow run screenshots.yml
+```
+
+---
 
 ## Signed Releases
 
-Release builds are signed with the ArcImage **upload key**, stored as GitHub Actions secrets
-(`ARCIMAGE_KEYSTORE_BASE64`, `ARCIMAGE_KEYSTORE_PASSWORD`, `ARCIMAGE_KEY_ALIAS`, `ARCIMAGE_KEY_PASSWORD`).
-The keystore is never committed (`*.jks` is git-ignored).
+Release builds are signed with the ArcImage upload key configured via GitHub Actions secrets (`ARCIMAGE_KEYSTORE_BASE64`, `ARCIMAGE_KEYSTORE_PASSWORD`, `ARCIMAGE_KEY_ALIAS`, `ARCIMAGE_KEY_PASSWORD`). Keystores (`*.jks`) are git-ignored and never committed.
 
 ```bash
-# Publish a release: builds a signed .aab + signed APKs (universal, arm64-v8a, x86_64)
-git tag v1.0.0 && git push origin v1.0.0
+# Tagging vX.Y.Z builds & publishes a signed AAB + Universal / arm64-v8a / x86_64 APKs + SHA256SUMS.txt
+git tag v1.1.3 && git push origin v1.1.3
 ```
 
-- `versionName` comes from the tag; `versionCode = MAJOR*10000 + MINOR*100 + PATCH` (v1.2.3 → 10203).
-- Run **ArcImage Signed Release** manually from the Actions tab to build the files without publishing a release.
-- Local signed build: set `ARCIMAGE_KEYSTORE_PATH` and the three password/alias values as environment
-  variables or in `~/.gradle/gradle.properties`, then run `gradle bundleRelease` and `gradle assembleRelease` (separately — ABI splits are
-  disabled for bundle builds).
-  Without them, release builds are produced unsigned.
-- For Google Play, enroll in **Play App Signing** and upload the `.aab`; Google holds the app signing key,
-  so a lost upload key can be reset.
+- `versionName` is derived automatically from the Git tag; `versionCode = MAJOR * 10000 + MINOR * 100 + PATCH` (e.g. `v1.1.3` → `10103`).
+- For local signed builds, export `ARCIMAGE_KEYSTORE_PATH` and the key credentials in your environment or `~/.gradle/gradle.properties`, then run `./gradlew bundleRelease` and `./gradlew assembleRelease`.
